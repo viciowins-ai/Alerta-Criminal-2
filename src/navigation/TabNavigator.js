@@ -7,6 +7,7 @@ import { View, Text, Platform } from 'react-native';
 // Screens
 import SafetyMapScreen from '../SafetyMapScreen';
 import IncidentReportScreen from '../IncidentReportScreen';
+import CommunityFeedScreen from '../CommunityFeedScreen';
 import PanicButtonScreen from '../PanicButtonScreen';
 import UserProfileScreen from '../UserProfileScreen';
 
@@ -14,7 +15,7 @@ const Tab = createBottomTabNavigator();
 
 const TabNavigator = () => {
     const { colorScheme } = useColorScheme();
-    const isDark = colorScheme === 'dark';
+    const isDark = true; // Force Dark Mode for Premium App aesthetic
 
     // Extra padding for Android devices with soft nav bars
     const androidBottomPadding = Platform.OS === 'android' ? 16 : 0;
@@ -56,6 +57,13 @@ const TabNavigator = () => {
             })}
         >
             <Tab.Screen name="Mapa" component={SafetyMapScreen} />
+            <Tab.Screen
+                name="Comunidade"
+                component={CommunityFeedScreen}
+                options={{
+                    tabBarIcon: ({ color }) => <MaterialIcons name="forum" size={24} color={color} />
+                }}
+            />
             <Tab.Screen name="Reportar" component={IncidentReportScreen} />
             <Tab.Screen
                 name="SOS"

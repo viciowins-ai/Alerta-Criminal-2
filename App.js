@@ -6,14 +6,18 @@ import MainNavigator from './src/navigation/MainNavigator';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
+import { AuthProvider } from './src/context/AuthContext';
+
 export default function App() {
   const isWeb = Platform.OS === 'web';
 
   const AppContent = (
-    <SafeAreaProvider>
-      <StatusBar style="auto" />
-      <MainNavigator />
-    </SafeAreaProvider>
+    <AuthProvider>
+      <SafeAreaProvider>
+        <StatusBar style="auto" />
+        <MainNavigator />
+      </SafeAreaProvider>
+    </AuthProvider>
   );
 
   if (isWeb) {

@@ -13,10 +13,18 @@
       "backgroundColor": "#ffffff"
     },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "config": {
+        "googleMapsApiKey": "AIzaSyCco2RJC3lfAkjYb6RYjPZHLMOhm5M2d7g"
+      }
     },
     "android": {
       "package": "com.stitch.alertaapp",
+      "config": {
+        "googleMaps": {
+          "apiKey": "AIzaSyCco2RJC3lfAkjYb6RYjPZHLMOhm5M2d7g"
+        }
+      },
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"

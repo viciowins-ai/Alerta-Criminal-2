@@ -1,199 +1,155 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, Image, ScrollView, Platform, KeyboardAvoidingView, Dimensions } from 'react-native';
-import { MaterialIcons, FontAwesome5, Ionicons } from '@expo/vector-icons';
+import { View, Text, TouchableOpacity, ScrollView, TextInput, Image, Alert, ActivityIndicator } from 'react-native';
+import { MaterialIcons, FontAwesome5 } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
-import Animated, { FadeIn, FadeOut, SlideInRight, SlideOutLeft, ZoomIn } from 'react-native-reanimated';
+import { supabase } from './lib/supabase';
+import { useAuth } from './context/AuthContext';
 
-const { width } = Dimensions.get('window');
+import IncidentLocationMap from './components/IncidentLocationMap';
 
-const IncidentReportScreen = () => {
-    const [step, setStep] = useState(0); // 0: Location, 1: Type, 2: Details, 3: Success
+const IncidentReportScreen = ({ navigation }) => {
+    const { user } = useAuth();
     const [selectedType, setSelectedType] = useState(null);
     const [description, setDescription] = useState('');
+    const [loading, setLoading] = useState(false);
 
-    const INCIDENT_TYPES = [
-        { id: 'theft', label: 'Roubo', icon: 'running', color: '#ef4444' },
-        { id: 'assault', label: 'Assalto', icon: 'fist-raised', color: '#f97316' },
-        { id: 'suspicious', label: 'Suspeito', icon: 'user-secret', color: '#eab308' },
-        { id: 'vandalism', label: 'Vandalismo', icon: 'spray-can', color: '#8b5cf6' },
-        { id: 'accident', label: 'Acidente', icon: 'car-crash', color: '#3b82f6' },
-        { id: 'noise', label: 'Barulho', icon: 'bullhorn', color: '#10b981' },
-    ];
+    const handleSubmit = async () => {
+        if (!selectedType) {
+            Alert.alert('Ops!', 'Selecione o tipo de incidente.');
+            return;
+        }
 
-    const handleNext = () => setStep(prev => prev + 1);
-    const handleBack = () => setStep(prev => prev - 1);
+        if (!user) {
+            Alert.alert('Erro', 'Você precisa estar logado para enviar um alerta.');
+            return;
+        }
 
-    const handleSubmit = () => {
-        // Simulate API call
-        setTimeout(() => {
-            setStep(3);
-        }, 1000);
+        setLoading(true);
+
+        try {
+            // Mock Coordinates (Curitiba/Araucaria region for testing)
+            // In a real app, use expo-location here
+            const latitude = -25.5 + (Math.random() * 0.01);
+            const longitude = -49.3 + (Math.random() * 0.01);
+
+            const { error } = await supabase.from('incidents').insert({
+                user_id: user.id,
+                type: selectedType,
+                description: description,
+                latitude: latitude,
+                longitude: longitude,
+                status: 'reportado'
+            });
+
+            if (error) throw error;
+
+            Alert.alert('Sucesso', 'Alerta enviado para a comunidade!', [
+                { text: 'OK', onPress: () => navigation.goBack() }
+            ]);
+
+        } catch (error) {
+            console.log(error);
+            Alert.alert('Erro', 'Falha ao enviar o alerta. Tente novamente.');
+        } finally {
+            setLoading(false);
+        }
     };
-
-    const resetFlow = () => {
-        setStep(0);
-        setSelectedType(null);
-        setDescription('');
-    };
-
-    const renderStepIndicator = () => (
-        <View className="flex-row justify-center gap-2 mb-6">
-            {[0, 1, 2].map(i => (
-                <View
-                    key={i}
-                    className={`h-2 rounded-full transition-all duration-300 ${i === step ? 'w-8 bg-primary' : i < step ? 'w-2 bg-green-500' : 'w-2 bg-slate-700'}`}
-                />
-            ))}
-        </View>
-    );
-
-    // Step 0: Location Confirmation
-    const LocationStep = () => (
-        <Animated.View entering={SlideInRight} exiting={SlideOutLeft} className="flex-1">
-            <Text className="text-xl font-bold text-white mb-2 text-center">Onde aconteceu?</Text>
-            <Text className="text-slate-400 text-center mb-6">Confirme a localização no mapa para alertar seus vizinhos.</Text>
-
-            <View className="flex-1 bg-slate-800 rounded-2xl overflow-hidden mb-6 relative border border-slate-700">
-                <Image
-                    source={{ uri: "https://lh3.googleusercontent.com/aida-public/AB6AXuBf8GE97LjX0E2YCcgJcn11kQ6of2weCzmAkR4Q5HNmJEvTmyFY_JLtAUMdmlzH3oYbfXG9NlNDGT6IG5BKkd5agtvE6ohXRVqQS8svaXNzmRyzd-4P4mlUb_EaN9HT4ASXBo0UWybrAS9eEdMqPwTfTg412qvTighcjlocIve1QfUr3iA7lDQweGkA-hbhIuDgRecqKPymOjPFbqi3Dv9teXp3zTJOs4i8HoTHR0hnOiHyYVrSjkUSJRLrdZG1-TV-SI236lWCiMk1" }}
-                    className="w-full h-full opacity-80"
-                    resizeMode="cover"
-                />
-                <View className="absolute inset-0 items-center justify-center">
-                    <View className="w-48 h-48 bg-blue-500/20 rounded-full items-center justify-center animate-pulse border border-blue-500/50">
-                        <MaterialIcons name="location-pin" size={48} color="#3b82f6" />
-                    </View>
-                </View>
-                <View className="absolute bottom-4 left-4 right-4 bg-slate-900/90 p-3 rounded-lg border border-slate-700">
-                    <Text className="text-white font-bold text-center">Rua das Flores, 123 - Centro</Text>
-                </View>
-            </View>
-
-            <TouchableOpacity onPress={handleNext} className="bg-primary h-14 rounded-xl items-center justify-center shadow-lg shadow-red-500/20">
-                <Text className="text-white font-bold text-lg">Confirmar Local</Text>
-            </TouchableOpacity>
-        </Animated.View>
-    );
-
-    // Step 1: Incident Type Category
-    const TypeStep = () => (
-        <Animated.View entering={SlideInRight} exiting={SlideOutLeft} className="flex-1">
-            <Text className="text-xl font-bold text-white mb-2 text-center">O que você viu?</Text>
-            <Text className="text-slate-400 text-center mb-6">Escolha a categoria que melhor descreve o incidente.</Text>
-
-            <View className="flex-row flex-wrap justify-between gap-y-4">
-                {INCIDENT_TYPES.map((type) => (
-                    <TouchableOpacity
-                        key={type.id}
-                        onPress={() => {
-                            setSelectedType(type);
-                            handleNext();
-                        }}
-                        className="w-[48%] aspect-square bg-slate-800 rounded-2xl items-center justify-center border-2 border-slate-700 active:border-primary active:bg-slate-700"
-                    >
-                        <View style={{ backgroundColor: type.color + '20' }} className="w-16 h-16 rounded-full items-center justify-center mb-3">
-                            <FontAwesome5 name={type.icon} size={28} color={type.color} />
-                        </View>
-                        <Text className="text-white font-bold">{type.label}</Text>
-                    </TouchableOpacity>
-                ))}
-            </View>
-        </Animated.View>
-    );
-
-    // Step 2: Details & Submit
-    const DetailsStep = () => (
-        <Animated.View entering={SlideInRight} exiting={SlideOutLeft} className="flex-1">
-            <Text className="text-xl font-bold text-white mb-2 text-center">Detalhes Adicionais</Text>
-            <Text className="text-slate-400 text-center mb-6">Ajude a comunidade com mais informações (Opcional).</Text>
-
-            <View className="flex-row items-center gap-4 mb-6 bg-slate-800 p-4 rounded-xl border border-slate-700">
-                <View style={{ backgroundColor: selectedType?.color + '20' }} className="w-12 h-12 rounded-full items-center justify-center">
-                    <FontAwesome5 name={selectedType?.icon} size={20} color={selectedType?.color} />
-                </View>
-                <View>
-                    <Text className="text-slate-400 text-xs uppercase">Categoria</Text>
-                    <Text className="text-white font-bold text-lg">{selectedType?.label}</Text>
-                </View>
-                <TouchableOpacity onPress={handleBack} className="ml-auto">
-                    <Text className="text-blue-400 font-bold">Alterar</Text>
-                </TouchableOpacity>
-            </View>
-
-            <Text className="text-white font-bold mb-2 ml-1">Descrição</Text>
-            <TextInput
-                value={description}
-                onChangeText={setDescription}
-                className="w-full h-40 bg-slate-800 rounded-xl p-4 text-white text-base border border-slate-700 mb-6"
-                placeholder="Ex: Dois indivíduos em uma moto preta..."
-                placeholderTextColor="#64748b"
-                multiline
-                textAlignVertical="top"
-            />
-
-            <TouchableOpacity onPress={handleSubmit} className="mt-auto bg-green-600 h-14 rounded-xl items-center justify-center shadow-lg shadow-green-500/20">
-                <Text className="text-white font-bold text-lg">Publicar Alerta</Text>
-            </TouchableOpacity>
-        </Animated.View>
-    );
-
-    // Step 3: Success & Gamification
-    const SuccessStep = () => (
-        <Animated.View entering={ZoomIn} className="flex-1 items-center justify-center">
-
-            <View className="w-32 h-32 bg-green-500 rounded-full items-center justify-center shadow-lg shadow-green-500/50 mb-8 icon-pulse">
-                <MaterialIcons name="check" size={64} color="white" />
-            </View>
-
-            <Text className="text-3xl font-bold text-white text-center mb-2">Alerta Publicado!</Text>
-            <Text className="text-slate-400 text-center max-w-xs mb-8">Obrigado por contribuir para a segurança da sua comunidade.</Text>
-
-            {/* Reward Card */}
-            <View className="bg-slate-800/80 border border-yellow-500/30 w-full p-6 rounded-2xl items-center relative overflow-hidden mb-8">
-                <View className="absolute top-0 w-full h-1 bg-yellow-500/50" />
-                <Text className="text-yellow-400 font-bold text-xs uppercase tracking-widest mb-2">Recompensa</Text>
-                <Text className="text-white font-black text-4xl mb-1">+50</Text>
-                <Text className="text-slate-300 text-sm">Pontos de Cidadania</Text>
-            </View>
-
-            <TouchableOpacity onPress={resetFlow} className="bg-slate-700 w-full h-14 rounded-xl items-center justify-center">
-                <Text className="text-white font-bold text-lg">Voltar ao Início</Text>
-            </TouchableOpacity>
-        </Animated.View>
-    );
-
 
     return (
-        <SafeAreaView className="flex-1 bg-background-light dark:bg-background-dark">
+        <SafeAreaView className="flex-1 bg-background-dark">
             <StatusBar style="light" />
-            <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} className="flex-1">
-                <View className="flex-1 px-4 py-2">
 
-                    {/* Header */}
-                    {step < 3 && (
-                        <View className="flex-row items-center mb-4">
-                            {step > 0 && (
-                                <TouchableOpacity onPress={handleBack} className="w-10 h-10 items-center justify-center rounded-full bg-slate-800 mr-4">
-                                    <MaterialIcons name="arrow-back" size={24} color="white" />
-                                </TouchableOpacity>
-                            )}
-                            <Text className="text-white font-bold text-xl flex-1">Novo Relatório</Text>
-                            <TouchableOpacity onPress={resetFlow}>
-                                <MaterialIcons name="close" size={24} color="#64748b" />
-                            </TouchableOpacity>
-                        </View>
-                    )}
+            {/* Header */}
+            <View className="flex-row items-center px-4 py-3 bg-slate-900 border-b border-slate-800">
+                <TouchableOpacity onPress={() => navigation.goBack()} className="p-2 -ml-2">
+                    <MaterialIcons name="arrow-back" size={24} color="white" />
+                </TouchableOpacity>
+                <Text className="text-white font-bold text-lg ml-2">Reportar Ocorrência</Text>
+            </View>
 
-                    {step < 3 && renderStepIndicator()}
+            <ScrollView className="flex-1 px-5 pt-6" contentContainerStyle={{ paddingBottom: 100 }}>
 
-                    {step === 0 && <LocationStep />}
-                    {step === 1 && <TypeStep />}
-                    {step === 2 && <DetailsStep />}
-                    {step === 3 && <SuccessStep />}
-
+                {/* Location Map Preview */}
+                <Text className="text-slate-300 font-bold text-sm mb-3">Sua Localização Atual</Text>
+                <View className="w-full h-48 rounded-xl overflow-hidden mb-6 bg-slate-800 border border-slate-700 relative">
+                    <IncidentLocationMap />
                 </View>
-            </KeyboardAvoidingView>
+
+                {/* Incident Type Grid */}
+                <Text className="text-white font-bold text-lg mb-3">Tipo de Incidente</Text>
+                <View className="flex-row flex-wrap justify-between gap-3 mb-6">
+                    {/* Roubo */}
+                    <TouchableOpacity
+                        onPress={() => setSelectedType('roubo')}
+                        className={`w-[48%] p-4 rounded-xl border flex-row items-center justify-center gap-2 ${selectedType === 'roubo' ? 'bg-red-600 border-red-500' : 'bg-slate-800 border-slate-700'}`}
+                    >
+                        <FontAwesome5 name="running" size={18} color="white" />
+                        <Text className="text-white font-bold text-sm">Roubo</Text>
+                    </TouchableOpacity>
+
+                    {/* Atividade Suspeita */}
+                    <TouchableOpacity
+                        onPress={() => setSelectedType('suspect')}
+                        className={`w-[48%] p-4 rounded-xl border flex-row items-center justify-center gap-2 ${selectedType === 'suspect' ? 'bg-red-600 border-red-500' : 'bg-slate-800 border-slate-700'}`}
+                    >
+                        <FontAwesome5 name="eye" size={18} color="white" />
+                        <Text className="text-white font-bold text-xs">Atividade Suspeita</Text>
+                    </TouchableOpacity>
+
+                    {/* Vandalismo */}
+                    <TouchableOpacity
+                        onPress={() => setSelectedType('vandalism')}
+                        className={`w-[48%] p-4 rounded-xl border flex-row items-center justify-center gap-2 ${selectedType === 'vandalism' ? 'bg-red-600 border-red-500' : 'bg-slate-800 border-slate-700'}`}
+                    >
+                        <FontAwesome5 name="trash" size={18} color="white" />
+                        <Text className="text-white font-bold text-sm">Vandalismo</Text>
+                    </TouchableOpacity>
+
+                    {/* Outro */}
+                    <TouchableOpacity
+                        onPress={() => setSelectedType('other')}
+                        className={`w-[48%] p-4 rounded-xl border flex-row items-center justify-center gap-2 ${selectedType === 'other' ? 'bg-red-600 border-red-500' : 'bg-slate-800 border-slate-700'}`}
+                    >
+                        <MaterialIcons name="more-horiz" size={24} color="white" />
+                        <Text className="text-white font-bold text-sm">Outro</Text>
+                    </TouchableOpacity>
+                </View>
+
+                {/* Details */}
+                <Text className="text-white font-bold text-lg mb-3">Detalhes da Ocorrência</Text>
+                <View className="bg-slate-800/80 border border-slate-700 rounded-xl p-4 h-32 mb-6">
+                    <TextInput
+                        placeholder="Descreva o que está acontecendo... (Opcional)"
+                        placeholderTextColor="#64748b"
+                        multiline
+                        textAlignVertical="top"
+                        className="text-white flex-1 text-base"
+                        value={description}
+                        onChangeText={setDescription}
+                    />
+                </View>
+
+                {/* Attach Media */}
+                <TouchableOpacity className="border-2 border-dashed border-slate-700 rounded-xl bg-slate-900/50 h-24 items-center justify-center flex-row gap-3 mb-8 hover:bg-slate-800/50 active:bg-slate-800">
+                    <MaterialIcons name="add-a-photo" size={24} color="#94a3b8" />
+                    <Text className="text-slate-400 font-bold">Anexar Foto ou Vídeo</Text>
+                </TouchableOpacity>
+
+                {/* Submit Button */}
+                <TouchableOpacity
+                    onPress={handleSubmit}
+                    disabled={loading}
+                    className="w-full bg-red-600 h-14 rounded-xl items-center justify-center shadow-lg shadow-red-600/30 active:bg-red-700"
+                >
+                    {loading ? (
+                        <ActivityIndicator color="white" />
+                    ) : (
+                        <Text className="text-white font-bold text-lg uppercase tracking-wider">Enviar Alerta</Text>
+                    )}
+                </TouchableOpacity>
+
+            </ScrollView>
         </SafeAreaView>
     );
 };
