@@ -6,7 +6,7 @@ import { StatusBar } from 'expo-status-bar';
 import { useAuth } from './context/AuthContext';
 
 const LoginScreen = ({ navigation }) => {
-    const { signIn, loading } = useAuth();
+    const { signIn, signInAsGuest, loading } = useAuth();
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
 
@@ -71,13 +71,22 @@ const LoginScreen = ({ navigation }) => {
                     <TouchableOpacity
                         onPress={handleLogin}
                         disabled={loading}
-                        className="bg-blue-600 h-14 rounded-xl items-center justify-center shadow-lg shadow-blue-600/30 active:bg-blue-700 mb-6"
+                        className="bg-blue-600 h-14 rounded-xl items-center justify-center shadow-lg shadow-blue-600/30 active:bg-blue-700 mb-4"
                     >
                         {loading ? (
                             <ActivityIndicator color="white" />
                         ) : (
                             <Text className="text-white font-bold text-lg">Entrar</Text>
                         )}
+                    </TouchableOpacity>
+
+                    {/* Guest Login Button */}
+                    <TouchableOpacity
+                        onPress={signInAsGuest}
+                        disabled={loading}
+                        className="bg-slate-700 h-14 rounded-xl items-center justify-center border border-slate-600 active:bg-slate-600 mb-6"
+                    >
+                        <Text className="text-white font-bold text-base">Entrar como Visitante (Teste)</Text>
                     </TouchableOpacity>
 
                     {/* Footer */}

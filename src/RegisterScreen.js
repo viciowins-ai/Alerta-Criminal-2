@@ -28,7 +28,17 @@ const RegisterScreen = ({ navigation }) => {
             return;
         }
 
-        await signUp(email, password, { full_name: name });
+        const success = await signUp(email, password, { full_name: name });
+
+        if (success) {
+            Alert.alert(
+                'Conta Criada com Sucesso!',
+                'Enviamos um e-mail de confirmação para você. Por favor, verifique sua caixa de entrada (e spam) e clique no link para ativar sua conta antes de fazer login.',
+                [
+                    { text: 'Ir para Login', onPress: () => navigation.navigate('Login') }
+                ]
+            );
+        }
     };
 
     return (

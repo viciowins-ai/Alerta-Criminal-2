@@ -1,10 +1,110 @@
-import React from 'react';
-import { View, Text, Image, TouchableOpacity, ScrollView, TextInput } from 'react-native';
+import React, { useEffect, useState, useCallback } from 'react';
+import { View, Text, Image, TouchableOpacity, ScrollView, RefreshControl, ActivityIndicator, FlatList } from 'react-native';
 import { MaterialIcons, FontAwesome5, Ionicons, Feather } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
+import { supabase } from './lib/supabase';
+import { useFocusEffect } from '@react-navigation/native';
 
 const CommunityFeedScreen = ({ navigation }) => {
+    const [posts, setPosts] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [refreshing, setRefreshing] = useState(false);
+
+    const fetchPosts = async () => {
+        try {
+            // Fetch incidents from Supabase
+            // We select *, and ideally we would join with profiles, but let's start simple
+            const { data, error } = await supabase
+                .from('incidents')
+                .select('*')
+                .order('created_at', { ascending: false });
+
+            if (error) {
+                console.error('Error fetching pinst:', error);
+            } else {
+                setPosts(data || []);
+            }
+        } catch (err) {
+            console.error('Exception fetching posts:', err);
+        } finally {
+            setLoading(false);
+            setRefreshing(false);
+        }
+    };
+
+    // Reload when screen comes into focus or on mount
+    useFocusEffect(
+        useCallback(() => {
+            fetchPosts();
+        }, [])
+    );
+
+    const onRefresh = () => {
+        setRefreshing(true);
+        fetchPosts();
+    };
+
+    const getIconForType = (type) => {
+        switch (type) {
+            case 'roubo': return 'running';
+            case 'suspect': return 'eye';
+            case 'vandalism': return 'trash';
+            default: return 'exclamation-circle';
+        }
+    };
+
+    const formatTime = (dateString) => {
+        if (!dateString) return '';
+        const date = new Date(dateString);
+        return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) + ' - ' + date.toLocaleDateString();
+    };
+
+    const renderPost = ({ item }) => (
+        <View className="border-b border-slate-800 bg-slate-900 pt-4 pb-2">
+            <View className="px-4 flex-row justify-between items-start mb-2">
+                <View className="flex-row gap-3">
+                    <View className="w-10 h-10 rounded-full bg-slate-700 items-center justify-center border border-slate-600">
+                        <FontAwesome5 name={getIconForType(item.type)} size={16} color="#94a3b8" />
+                    </View>
+                    <View>
+                        <Text className="text-white font-bold text-base">Alerta de {item.type ? item.type.toUpperCase() : 'INCIDENTE'}</Text>
+                        <Text className="text-slate-500 text-xs">{formatTime(item.created_at)}</Text>
+                    </View>
+                </View>
+                <TouchableOpacity>
+                    <MaterialIcons name="more-horiz" size={24} color="#64748b" />
+                </TouchableOpacity>
+            </View>
+
+            <Text className="text-slate-100 px-4 mb-3 leading-5">
+                {item.description || "Sem descrição fornecida."}
+            </Text>
+
+            {/* Location Tag */}
+            <View className="px-4 mb-3 flex-row items-center gap-1">
+                <MaterialIcons name="location-pin" size={14} color="#64748b" />
+                <Text className="text-slate-500 text-xs">Lat: {item.latitude?.toFixed(4)}, Long: {item.longitude?.toFixed(4)}</Text>
+            </View>
+
+            {/* Actions */}
+            <View className="flex-row border-t border-slate-800 mt-2 py-2 mx-4">
+                <TouchableOpacity className="flex-1 flex-row items-center justify-center gap-2 py-1">
+                    <Feather name="thumbs-up" size={18} color="#94a3b8" />
+                    <Text className="text-slate-400 text-sm">Curtir</Text>
+                </TouchableOpacity>
+                <TouchableOpacity className="flex-1 flex-row items-center justify-center gap-2 py-1">
+                    <Feather name="message-square" size={18} color="#94a3b8" />
+                    <Text className="text-slate-400 text-sm">Comentar</Text>
+                </TouchableOpacity>
+                <TouchableOpacity className="flex-1 flex-row items-center justify-center gap-2 py-1">
+                    <Feather name="share-2" size={18} color="#94a3b8" />
+                    <Text className="text-slate-400 text-sm">Compartilhar</Text>
+                </TouchableOpacity>
+            </View>
+        </View>
+    );
+
     return (
         <SafeAreaView className="flex-1 bg-background-dark">
             <StatusBar style="light" />
@@ -13,146 +113,44 @@ const CommunityFeedScreen = ({ navigation }) => {
             <View className="flex-row items-center justify-between px-4 py-3 bg-slate-900 border-b border-slate-800">
                 <View style={{ width: 24 }} />
                 <Text className="text-white font-bold text-lg">Rede Comunitária</Text>
-                <TouchableOpacity>
-                    <Ionicons name="search" size={24} color="white" />
+                <TouchableOpacity onPress={fetchPosts}>
+                    <Ionicons name="refresh" size={24} color="white" />
                 </TouchableOpacity>
             </View>
 
-            <ScrollView className="flex-1" contentContainerStyle={{ paddingBottom: 100 }}>
-
-                {/* Create Post Input */}
-                <View className="px-4 py-4 border-b border-slate-800 bg-slate-900/50 flex-row gap-3 items-center">
-                    <View className="w-10 h-10 rounded-full bg-orange-200 items-center justify-center">
-                        <Text className="font-bold text-orange-800">YO</Text>
-                    </View>
-                    <TouchableOpacity className="flex-1 bg-slate-800 h-12 rounded-full justify-center px-4 border border-slate-700">
-                        <Text className="text-slate-400">Criar Nova Publicação...</Text>
-                    </TouchableOpacity>
+            {/* Create Post Input */}
+            <View className="px-4 py-4 border-b border-slate-800 bg-slate-900/50 flex-row gap-3 items-center">
+                <View className="w-10 h-10 rounded-full bg-orange-200 items-center justify-center">
+                    <Text className="font-bold text-orange-800">EU</Text>
                 </View>
+                <TouchableOpacity
+                    onPress={() => navigation.navigate('Reportar')}
+                    className="flex-1 bg-slate-800 h-12 rounded-full justify-center px-4 border border-slate-700"
+                >
+                    <Text className="text-slate-400">Reportar algo suspeito...</Text>
+                </TouchableOpacity>
+            </View>
 
-                {/* Feed Items */}
-
-                {/* Post 1: Joan Silva */}
-                <View className="border-b border-slate-800 bg-slate-900 pt-4 pb-2">
-                    <View className="px-4 flex-row justify-between items-start mb-2">
-                        <View className="flex-row gap-3">
-                            <Image
-                                source={{ uri: "https://randomuser.me/api/portraits/men/32.jpg" }}
-                                className="w-10 h-10 rounded-full bg-slate-700"
-                            />
-                            <View>
-                                <Text className="text-white font-bold text-base">João Silva</Text>
-                                <Text className="text-slate-500 text-xs">há 5 min</Text>
-                            </View>
+            {loading ? (
+                <View className="flex-1 items-center justify-center">
+                    <ActivityIndicator size="large" color="#3b82f6" />
+                </View>
+            ) : (
+                <FlatList
+                    data={posts}
+                    renderItem={renderPost}
+                    keyExtractor={(item) => item.id.toString()}
+                    contentContainerStyle={{ paddingBottom: 100 }}
+                    refreshControl={
+                        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#fff" />
+                    }
+                    ListEmptyComponent={
+                        <View className="py-10 items-center">
+                            <Text className="text-slate-500">Nenhum alerta recente na sua área.</Text>
                         </View>
-                        <TouchableOpacity>
-                            <MaterialIcons name="more-horiz" size={24} color="#64748b" />
-                        </TouchableOpacity>
-                    </View>
-                    <Text className="text-slate-100 px-4 mb-3 leading-5">
-                        Acabei de ver um carro desconhecido circulando lentamente pelo bairro. Alguém mais notou? Fiquem atentos.
-                    </Text>
-
-                    {/* Actions */}
-                    <View className="flex-row border-t border-slate-800 mt-2 py-2 mx-4">
-                        <TouchableOpacity className="flex-1 flex-row items-center justify-center gap-2 py-1">
-                            <Feather name="thumbs-up" size={18} color="#94a3b8" />
-                            <Text className="text-slate-400 text-sm">Curtir</Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity className="flex-1 flex-row items-center justify-center gap-2 py-1">
-                            <Feather name="message-square" size={18} color="#94a3b8" />
-                            <Text className="text-slate-400 text-sm">Comentar</Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity className="flex-1 flex-row items-center justify-center gap-2 py-1">
-                            <Feather name="share-2" size={18} color="#94a3b8" />
-                            <Text className="text-slate-400 text-sm">Compartilhar</Text>
-                        </TouchableOpacity>
-                    </View>
-                </View>
-
-                {/* Post 2: Maria Oliveira (With Image) */}
-                <View className="border-b border-slate-800 bg-slate-900 pt-4 pb-2">
-                    <View className="px-4 flex-row justify-between items-start mb-2">
-                        <View className="flex-row gap-3">
-                            <Image
-                                source={{ uri: "https://randomuser.me/api/portraits/women/44.jpg" }}
-                                className="w-10 h-10 rounded-full bg-slate-700"
-                            />
-                            <View>
-                                <Text className="text-white font-bold text-base">Maria Oliveira</Text>
-                                <Text className="text-slate-500 text-xs">há 1 hora</Text>
-                            </View>
-                        </View>
-                        <TouchableOpacity>
-                            <MaterialIcons name="more-horiz" size={24} color="#64748b" />
-                        </TouchableOpacity>
-                    </View>
-                    <Text className="text-slate-100 px-4 mb-3 leading-5">
-                        Pessoal, meu cachorro, um golden retriever chamado Max, fugiu hoje de manhã perto do parque. Ele é amigável e está com uma coleira azul. Se alguém o vir, por favor me avise!
-                    </Text>
-
-                    {/* Post Image */}
-                    <Image
-                        source={{ uri: "https://img.freepik.com/free-photo/golden-retriever-dog-portrait-outdoor_23-2149202521.jpg" }}
-                        className="w-full h-64 bg-slate-800 mb-3"
-                        resizeMode="cover"
-                    />
-
-                    {/* Actions */}
-                    <View className="flex-row border-t border-slate-800 mt-1 py-2 mx-4">
-                        <TouchableOpacity className="flex-1 flex-row items-center justify-center gap-2 py-1">
-                            <Feather name="thumbs-up" size={18} color="#94a3b8" />
-                            <Text className="text-slate-400 text-sm">Curtir</Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity className="flex-1 flex-row items-center justify-center gap-2 py-1">
-                            <Feather name="message-square" size={18} color="#94a3b8" />
-                            <Text className="text-slate-400 text-sm">Comentar</Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity className="flex-1 flex-row items-center justify-center gap-2 py-1">
-                            <Feather name="share-2" size={18} color="#94a3b8" />
-                            <Text className="text-slate-400 text-sm">Compartilhar</Text>
-                        </TouchableOpacity>
-                    </View>
-                </View>
-
-                {/* Post 3: Carlos Souza */}
-                <View className="border-b border-slate-800 bg-slate-900 pt-4 pb-2">
-                    <View className="px-4 flex-row justify-between items-start mb-2">
-                        <View className="flex-row gap-3">
-                            <View className="w-10 h-10 rounded-full bg-orange-300 items-center justify-center">
-                                <FontAwesome5 name="store" size={16} color="#7c2d12" />
-                            </View>
-                            <View>
-                                <Text className="text-white font-bold text-base">Carlos Souza</Text>
-                                <Text className="text-slate-500 text-xs">há 3 horas</Text>
-                            </View>
-                        </View>
-                        <TouchableOpacity>
-                            <MaterialIcons name="more-horiz" size={24} color="#64748b" />
-                        </TouchableOpacity>
-                    </View>
-                    <Text className="text-slate-100 px-4 mb-3 leading-5">
-                        Atenção, vizinhos! A Rua das Flores estará fechada no próximo sábado, das 8h às 18h, para a nossa festa de bairro. Planejem suas rotas!
-                    </Text>
-
-                    {/* Actions */}
-                    <View className="flex-row border-t border-slate-800 mt-2 py-2 mx-4">
-                        <TouchableOpacity className="flex-1 flex-row items-center justify-center gap-2 py-1">
-                            <Feather name="thumbs-up" size={18} color="#94a3b8" />
-                            <Text className="text-slate-400 text-sm">Curtir</Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity className="flex-1 flex-row items-center justify-center gap-2 py-1">
-                            <Feather name="message-square" size={18} color="#94a3b8" />
-                            <Text className="text-slate-400 text-sm">Comentar</Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity className="flex-1 flex-row items-center justify-center gap-2 py-1">
-                            <Feather name="share-2" size={18} color="#94a3b8" />
-                            <Text className="text-slate-400 text-sm">Compartilhar</Text>
-                        </TouchableOpacity>
-                    </View>
-                </View>
-
-            </ScrollView>
+                    }
+                />
+            )}
         </SafeAreaView>
     );
 };

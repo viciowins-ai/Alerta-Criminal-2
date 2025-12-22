@@ -66,17 +66,33 @@ export const AuthProvider = ({ children }) => {
         if (error) {
             Alert.alert('Erro no Cadastro', error.message);
             setLoading(false);
-            return;
+            return false;
         }
 
         if (data.user) {
-            Alert.alert('Cadastro Realizado', 'Verifique seu e-mail para confirmar a conta.');
+            // Sucesso! Retorna true para a tela lidar com a navegação
+            setLoading(false);
+            return true;
         }
+
+        setLoading(false);
+        return false;
+    };
+
+    const signInAsGuest = async () => {
+        setLoading(true);
+        // Simula um usuário logado para testes
+        const guestUser = {
+            id: 'guest-123',
+            email: 'visitante@teste.com',
+            user_metadata: { full_name: 'Visitante' }
+        };
+        setUser(guestUser);
         setLoading(false);
     };
 
     return (
-        <AuthContext.Provider value={{ user, loading, signIn, signOut, signUp }}>
+        <AuthContext.Provider value={{ user, loading, signIn, signOut, signUp, signInAsGuest }}>
             {children}
         </AuthContext.Provider>
     );
