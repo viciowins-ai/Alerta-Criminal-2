@@ -1,14 +1,36 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { supabase } from './lib/supabase';
+import { useAuth } from './context/AuthContext';
 import { View, Text, TouchableOpacity, ScrollView, FlatList, Alert, Modal, TextInput } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 
 const EmergencyContactsScreen = ({ navigation }) => {
-    const [contacts, setContacts] = useState([
-        { id: '1', name: 'Mãe', phone: '(11) 98888-1111', relationship: 'Família' },
-        { id: '2', name: 'Marcos (Vizinho)', phone: '(11) 97777-2222', relationship: 'Vizinho' },
-    ]);
+    const { user } = useAuth();
+    const [contacts, setContacts] = useState([]);
+    const [loading, setLoading] = useState(false);
+
+    useEffect(() => {
+        if (user) fetchContacts();
+    }, [user]);
+
+    const fetchContacts = async () => {
+        setLoading(true);
+        const { data, error } = await supabase
+            .from('emergency_contacts')
+            .select('*')
+            .eq('user_id', user.id)
+            .order('created_at', { ascending: true });
+
+        if (error) {
+            console.error(error);
+            Alert.alert('Erro', 'Falha ao carregar contatos');
+        } else {
+            setContacts(data || []);
+        }
+        setLoading(false);
+    };
 
     const [modalVisible, setModalVisible] = useState(false);
     const [newContact, setNewContact] = useState({ name: '', phone: '', relationship: '' });
@@ -22,24 +44,43 @@ const EmergencyContactsScreen = ({ navigation }) => {
                 {
                     text: "Remover",
                     style: "destructive",
-                    onPress: () => setContacts(prev => prev.filter(c => c.id !== id))
+                    onPress: async () => {
+                        const { error } = await supabase
+                            .from('emergency_contacts')
+                            .delete()
+                            .eq('id', id);
+
+                        if (error) Alert.alert('Erro', 'Não foi possível remover o contato.');
+                        else fetchContacts();
+                    }
                 }
             ]
         );
     };
 
-    const handleAddContact = () => {
+    const handleAddContact = async () => {
         if (!newContact.name || !newContact.phone) {
             Alert.alert("Erro", "Nome e telefone são obrigatórios.");
             return;
         }
-        const contact = {
-            id: Date.now().toString(),
-            ...newContact
-        };
-        setContacts(prev => [...prev, contact]);
-        setNewContact({ name: '', phone: '', relationship: '' });
-        setModalVisible(false);
+
+        const { error } = await supabase
+            .from('emergency_contacts')
+            .insert({
+                user_id: user.id,
+                name: newContact.name,
+                phone: newContact.phone,
+                relationship: newContact.relationship
+            });
+
+        if (error) {
+            Alert.alert('Erro', 'Não foi possível adicionar o contato.');
+            console.error(error);
+        } else {
+            fetchContacts();
+            setNewContact({ name: '', phone: '', relationship: '' });
+            setModalVisible(false);
+        }
     };
 
     const renderContactItem = ({ item }) => (

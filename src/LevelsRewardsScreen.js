@@ -1,10 +1,48 @@
-import React from 'react';
-import { View, Text, ScrollView, TouchableOpacity, Image } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, ScrollView, TouchableOpacity, Image, ActivityIndicator } from 'react-native';
+import { supabase } from './lib/supabase';
+import { useAuth } from './context/AuthContext';
 import { MaterialIcons, FontAwesome5, Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 
 const LevelsRewardsScreen = ({ navigation }) => {
+    const { user } = useAuth();
+    const [profile, setProfile] = useState(null);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        if (user) fetchProfile();
+    }, [user]);
+
+    const fetchProfile = async () => {
+        try {
+            const { data, error } = await supabase
+                .from('profiles')
+                .select('*')
+                .eq('id', user.id)
+                .single();
+
+            if (data) setProfile(data);
+        } catch (e) {
+            console.log(e);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    // Simple Level Logic based on points
+    const points = profile?.points || 0;
+    const getLevelInfo = (pts) => {
+        if (pts < 100) return { current: 'Guardião Bronze', next: 'Guardião Prata', max: 100 };
+        if (pts < 300) return { current: 'Guardião Prata', next: 'Guardião Ouro', max: 300 };
+        if (pts < 600) return { current: 'Guardião Ouro', next: 'Guardião Platina', max: 600 };
+        return { current: 'Guardião Platina', next: 'Lenda Urbana', max: 1000 };
+    };
+
+    const levelInfo = getLevelInfo(points);
+    const progressPercent = Math.min((points / levelInfo.max) * 100, 100);
+
     return (
         <SafeAreaView className="flex-1 bg-background-dark">
             <StatusBar style="light" />
@@ -33,16 +71,19 @@ const LevelsRewardsScreen = ({ navigation }) => {
                     </View>
 
                     <Text className="text-slate-400 text-sm mb-1">Seu Nível Atual</Text>
-                    <Text className="text-3xl font-black text-white mb-6">Guardião Ouro</Text>
+                    <Text className="text-3xl font-black text-white mb-6">{levelInfo.current}</Text>
 
                     {/* Progress Bar */}
                     <View className="w-full">
                         <View className="flex-row justify-between mb-2 px-1">
-                            <Text className="text-slate-400 text-xs">Próximo nível: Guardião Platina</Text>
-                            <Text className="text-white font-bold text-xs">250/500</Text>
+                            <Text className="text-slate-400 text-xs">Próximo nível: {levelInfo.next}</Text>
+                            <Text className="text-white font-bold text-xs">{points}/{levelInfo.max}</Text>
                         </View>
                         <View className="h-3 bg-slate-800 rounded-full overflow-hidden w-full relative">
-                            <View className="h-full bg-yellow-500 w-[50%] rounded-full z-10" />
+                            <View
+                                className="h-full bg-yellow-500 rounded-full z-10"
+                                style={{ width: `${progressPercent}%` }}
+                            />
                             <View className="h-full bg-slate-700 w-full absolute top-0 left-0 opacity-30" />
                         </View>
                     </View>

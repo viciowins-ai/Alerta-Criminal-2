@@ -21,6 +21,7 @@ import ReferralScreen from '../ReferralScreen';
 import SafetyTipsScreen from '../SafetyTipsScreen';
 import PremiumTipsScreen from '../PremiumTipsScreen';
 import HelpCenterScreen from '../HelpCenterScreen';
+import PostDetailsScreen from '../PostDetailsScreen';
 
 const Stack = createNativeStackNavigator();
 const AuthStack = createNativeStackNavigator();
@@ -49,6 +50,7 @@ const AppNavigator = () => (
         <Stack.Screen name="SafeRoute" component={SafeRouteScreen} />
         <Stack.Screen name="Referral" component={ReferralScreen} />
         <Stack.Screen name="HelpCenter" component={HelpCenterScreen} />
+        <Stack.Screen name="PostDetails" component={PostDetailsScreen} />
     </Stack.Navigator>
 );
 

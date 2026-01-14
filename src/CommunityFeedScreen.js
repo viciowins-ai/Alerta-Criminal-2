@@ -4,21 +4,42 @@ import { MaterialIcons, FontAwesome5, Ionicons, Feather } from '@expo/vector-ico
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { supabase } from './lib/supabase';
+import { useAuth } from './context/AuthContext';
 import { useFocusEffect } from '@react-navigation/native';
 
 const CommunityFeedScreen = ({ navigation }) => {
+    const { user } = useAuth();
     const [posts, setPosts] = useState([]);
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
 
+    // Map of likesByUser: { incidentId: true/false }
+    const [likedPosts, setLikedPosts] = useState({});
+
     const fetchPosts = async () => {
         try {
-            // Fetch incidents from Supabase
-            // We select *, and ideally we would join with profiles, but let's start simple
+            // Fetch incidents joined with profiles, likes count, comments count
             const { data, error } = await supabase
                 .from('incidents')
-                .select('*')
+                .select(`
+                    *,
+                    profiles (full_name, guardian_level),
+                    likes (count),
+                    comments (count)
+                `)
                 .order('created_at', { ascending: false });
+
+            // Also check which ones current user liked
+            if (user) {
+                const { data: userLikes } = await supabase
+                    .from('likes')
+                    .select('incident_id')
+                    .eq('user_id', user.id);
+
+                const likesMap = {};
+                userLikes?.forEach(l => likesMap[l.incident_id] = true);
+                setLikedPosts(likesMap);
+            }
 
             if (error) {
                 console.error('Error fetching pinst:', error);
@@ -40,9 +61,25 @@ const CommunityFeedScreen = ({ navigation }) => {
         }, [])
     );
 
-    const onRefresh = () => {
+    const onRefresh = useCallback(() => {
         setRefreshing(true);
         fetchPosts();
+    }, []);
+
+    const toggleLike = async (incidentId) => {
+        if (!user) return;
+
+        const isLiked = likedPosts[incidentId];
+
+        // Optimistic update
+        setLikedPosts(prev => ({ ...prev, [incidentId]: !isLiked }));
+
+        if (isLiked) {
+            await supabase.from('likes').delete().match({ user_id: user.id, incident_id: incidentId });
+        } else {
+            await supabase.from('likes').insert({ user_id: user.id, incident_id: incidentId });
+        }
+        fetchPosts(); // Refresh counts
     };
 
     const getIconForType = (type) => {
@@ -61,15 +98,23 @@ const CommunityFeedScreen = ({ navigation }) => {
     };
 
     const renderPost = ({ item }) => (
-        <View className="border-b border-slate-800 bg-slate-900 pt-4 pb-2">
+        <TouchableOpacity
+            activeOpacity={0.9}
+            onPress={() => navigation.navigate('PostDetails', { postId: item.id })}
+            className="border-b border-slate-800 bg-slate-900 pt-4 pb-2"
+        >
             <View className="px-4 flex-row justify-between items-start mb-2">
                 <View className="flex-row gap-3">
                     <View className="w-10 h-10 rounded-full bg-slate-700 items-center justify-center border border-slate-600">
                         <FontAwesome5 name={getIconForType(item.type)} size={16} color="#94a3b8" />
                     </View>
                     <View>
-                        <Text className="text-white font-bold text-base">Alerta de {item.type ? item.type.toUpperCase() : 'INCIDENTE'}</Text>
-                        <Text className="text-slate-500 text-xs">{formatTime(item.created_at)}</Text>
+                        <Text className="text-white font-bold text-base">
+                            {item.profiles?.full_name || "Anônimo"} • <Text className="text-slate-400 font-normal text-sm">Alerta de {item.type ? item.type.toUpperCase() : 'INCIDENTE'}</Text>
+                        </Text>
+                        <Text className="text-slate-500 text-xs">
+                            {item.profiles?.guardian_level || "Novo Guardião"} • {formatTime(item.created_at)}
+                        </Text>
                     </View>
                 </View>
                 <TouchableOpacity>
@@ -89,20 +134,30 @@ const CommunityFeedScreen = ({ navigation }) => {
 
             {/* Actions */}
             <View className="flex-row border-t border-slate-800 mt-2 py-2 mx-4">
-                <TouchableOpacity className="flex-1 flex-row items-center justify-center gap-2 py-1">
-                    <Feather name="thumbs-up" size={18} color="#94a3b8" />
-                    <Text className="text-slate-400 text-sm">Curtir</Text>
+                <TouchableOpacity
+                    onPress={() => toggleLike(item.id)}
+                    className="flex-1 flex-row items-center justify-center gap-2 py-1"
+                >
+                    <Feather name="thumbs-up" size={18} color={likedPosts[item.id] ? "#3b82f6" : "#94a3b8"} />
+                    <Text className={`${likedPosts[item.id] ? "text-blue-500 font-bold" : "text-slate-400"} text-sm`}>
+                        {item.likes?.[0]?.count > 0 ? item.likes[0].count : 'Curtir'}
+                    </Text>
                 </TouchableOpacity>
-                <TouchableOpacity className="flex-1 flex-row items-center justify-center gap-2 py-1">
+                <TouchableOpacity
+                    onPress={() => navigation.navigate('PostDetails', { postId: item.id })}
+                    className="flex-1 flex-row items-center justify-center gap-2 py-1"
+                >
                     <Feather name="message-square" size={18} color="#94a3b8" />
-                    <Text className="text-slate-400 text-sm">Comentar</Text>
+                    <Text className="text-slate-400 text-sm">
+                        {item.comments?.[0]?.count > 0 ? item.comments[0].count : 'Comentar'}
+                    </Text>
                 </TouchableOpacity>
                 <TouchableOpacity className="flex-1 flex-row items-center justify-center gap-2 py-1">
                     <Feather name="share-2" size={18} color="#94a3b8" />
                     <Text className="text-slate-400 text-sm">Compartilhar</Text>
                 </TouchableOpacity>
             </View>
-        </View>
+        </TouchableOpacity>
     );
 
     return (

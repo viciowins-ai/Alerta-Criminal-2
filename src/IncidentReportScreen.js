@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, ScrollView, TextInput, Image, Alert, ActivityIndicator } from 'react-native';
+import * as Location from 'expo-location';
 import { MaterialIcons, FontAwesome5 } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
@@ -28,10 +29,19 @@ const IncidentReportScreen = ({ navigation }) => {
         setLoading(true);
 
         try {
-            // Mock Coordinates (Curitiba/Araucaria region for testing)
-            // In a real app, use expo-location here
-            const latitude = -25.5 + (Math.random() * 0.01);
-            const longitude = -49.3 + (Math.random() * 0.01);
+            let latitude = -23.5505;
+            let longitude = -46.6333;
+
+            try {
+                let { status } = await Location.requestForegroundPermissionsAsync();
+                if (status === 'granted') {
+                    let location = await Location.getCurrentPositionAsync({});
+                    latitude = location.coords.latitude;
+                    longitude = location.coords.longitude;
+                }
+            } catch (e) {
+                console.log("Erro ao obter localização, usando padrão:", e);
+            }
 
             const { error } = await supabase.from('incidents').insert({
                 user_id: user.id,

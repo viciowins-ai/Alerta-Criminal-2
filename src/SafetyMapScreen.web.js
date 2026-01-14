@@ -1,134 +1,72 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, Image, Dimensions, ActivityIndicator } from 'react-native';
-import { GoogleMap, useJsApiLoader, Marker } from '@react-google-maps/api';
 import { MaterialIcons, FontAwesome5, Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import Animated, { FadeInDown } from 'react-native-reanimated';
+import { supabase } from './lib/supabase';
+import { useAuth } from './context/AuthContext';
+import { MapContainer, TileLayer, Marker, useMap, Popup } from 'react-leaflet';
+import L from 'leaflet';
 
-// ⚠️ USER API KEY
-const GOOGLE_MAPS_API_KEY = "AIzaSyCco2RJC3lfAkjYb6RYjPZHLMOhm5M2d7g";
+// Fix icons
+const icon = L.icon({
+    iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
+    iconRetinaUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
+    shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
+    iconSize: [25, 41],
+    iconAnchor: [12, 41],
+    popupAnchor: [1, -34],
+    shadowSize: [41, 41]
+});
 
-const containerStyle = {
-    width: '100%',
-    height: '100%'
-};
-
-const center = {
-    lat: -23.550520,
-    lng: -46.633308
-};
-
-// Dark Mode Style for Google Maps
-const darkMapStyle = [
-    { elementType: "geometry", stylers: [{ color: "#242f3e" }] },
-    { elementType: "labels.text.stroke", stylers: [{ color: "#242f3e" }] },
-    { elementType: "labels.text.fill", stylers: [{ color: "#746855" }] },
-    {
-        featureType: "administrative.locality",
-        elementType: "labels.text.fill",
-        stylers: [{ color: "#d59563" }],
-    },
-    {
-        featureType: "poi",
-        elementType: "labels.text.fill",
-        stylers: [{ color: "#d59563" }],
-    },
-    {
-        featureType: "poi.park",
-        elementType: "geometry",
-        stylers: [{ color: "#263c3f" }],
-    },
-    {
-        featureType: "poi.park",
-        elementType: "labels.text.fill",
-        stylers: [{ color: "#6b9a76" }],
-    },
-    {
-        featureType: "road",
-        elementType: "geometry",
-        stylers: [{ color: "#38414e" }],
-    },
-    {
-        featureType: "road",
-        elementType: "geometry.stroke",
-        stylers: [{ color: "#212a37" }],
-    },
-    {
-        featureType: "road",
-        elementType: "labels.text.fill",
-        stylers: [{ color: "#9ca5b3" }],
-    },
-    {
-        featureType: "road.highway",
-        elementType: "geometry",
-        stylers: [{ color: "#746855" }],
-    },
-    {
-        featureType: "road.highway",
-        elementType: "geometry.stroke",
-        stylers: [{ color: "#1f2835" }],
-    },
-    {
-        featureType: "road.highway",
-        elementType: "labels.text.fill",
-        stylers: [{ color: "#f3d19c" }],
-    },
-    {
-        featureType: "transit",
-        elementType: "geometry",
-        stylers: [{ color: "#2f3948" }],
-    },
-    {
-        featureType: "transit.station",
-        elementType: "labels.text.fill",
-        stylers: [{ color: "#d59563" }],
-    },
-    {
-        featureType: "water",
-        elementType: "geometry",
-        stylers: [{ color: "#17263c" }],
-    },
-    {
-        featureType: "water",
-        elementType: "labels.text.fill",
-        stylers: [{ color: "#515c6d" }],
-    },
-    {
-        featureType: "water",
-        elementType: "labels.text.stroke",
-        stylers: [{ color: "#17263c" }],
-    },
-];
+// Helper for changing view
+function ChangeView({ center, zoom }) {
+    const map = useMap();
+    map.setView(center, zoom);
+    return null;
+}
 
 const SafetyMapScreen = ({ navigation }) => {
     const [selectedRange, setSelectedRange] = useState('1 km');
     const [showSummary, setShowSummary] = useState(true);
+    const [mapCenter, setMapCenter] = useState([-23.550520, -46.633308]); // Default SP
+    const [incidents, setIncidents] = useState([]);
+    const [zoom, setZoom] = useState(13);
 
-    const { isLoaded } = useJsApiLoader({
-        id: 'google-map-script',
-        googleMapsApiKey: GOOGLE_MAPS_API_KEY
-    });
+    const fetchIncidents = async () => {
+        const { data, error } = await supabase
+            .from('incidents')
+            .select('*')
+            .order('created_at', { ascending: false });
 
-    const [map, setMap] = useState(null);
+        if (error) {
+            console.error('Error fetching incidents:', error);
+        } else {
+            console.log("Fetched incidents:", data);
+            setIncidents(data || []);
+        }
+    };
 
-    const onLoad = useCallback(function callback(map) {
-        setMap(map);
+    useEffect(() => {
+        fetchIncidents();
     }, []);
 
-    const onUnmount = useCallback(function callback(map) {
-        setMap(null);
-    }, []);
-
-    if (!isLoaded) {
-        return (
-            <View className="flex-1 bg-slate-900 items-center justify-center">
-                <StatusBar style="light" />
-                <ActivityIndicator size="large" color="#eab308" />
-                <Text className="text-slate-400 mt-4 font-bold">Carregando Mapa...</Text>
-            </View>
-        );
-    }
+    // Function to handle "My Location"
+    const handleMyLocation = () => {
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition((position) => {
+                const { latitude, longitude } = position.coords;
+                setMapCenter([latitude, longitude]);
+                setZoom(15);
+            }, (error) => {
+                console.error("Error getting location", error);
+                alert("Erro ao obter localização.");
+            });
+        } else {
+            alert("Geolocalização não suportada neste navegador.");
+        }
+    };
 
     return (
         <SafeAreaView className="flex-1 bg-slate-900 w-full h-full">
@@ -136,7 +74,7 @@ const SafetyMapScreen = ({ navigation }) => {
 
             {/* Header Title */}
             <View className="absolute top-0 left-0 right-0 h-24 pt-8 items-center justify-start z-20 pointer-events-none bg-gradient-to-b from-black/80 to-transparent">
-                <Text className="text-white text-lg font-bold shadow-md">Mapa de Segurança</Text>
+                <Text className="text-white text-lg font-bold shadow-md">Mapa de Segurança (OSM)</Text>
             </View>
 
             {/* Back Button */}
@@ -147,7 +85,7 @@ const SafetyMapScreen = ({ navigation }) => {
                 <MaterialIcons name="arrow-back" size={24} color="white" />
             </TouchableOpacity>
 
-            {/* Range Filters */}
+            {/* Range Filters - Visual Only for now */}
             <View className="absolute top-20 left-0 right-0 z-20 px-4 flex-row justify-between items-start">
                 <View className="flex-row gap-2">
                     {['1 km', '5 km', '10 km'].map((range) => (
@@ -167,29 +105,45 @@ const SafetyMapScreen = ({ navigation }) => {
                 </TouchableOpacity>
             </View>
 
-            {/* Google Map */}
-            <View className="relative flex-1 bg-slate-900 overflow-hidden">
-                <GoogleMap
-                    mapContainerStyle={containerStyle}
-                    center={center}
-                    zoom={14}
-                    onLoad={onLoad}
-                    onUnmount={onUnmount}
-                    options={{
-                        styles: darkMapStyle,
-                        disableDefaultUI: true, // Clean look
-                        zoomControl: false,
-                    }}
-                >
-                    {/* Exemplo de Marcador */}
-                    <Marker position={center} />
-                </GoogleMap>
+            {/* Leaflet Map */}
+            <View className="relative flex-1 bg-slate-900 overflow-hidden z-0">
+                {/* Explicit style for container */}
+                <div style={{ display: 'flex', flexDirection: 'column', height: '100%', width: '100%', position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}>
+                    <MapContainer
+                        center={mapCenter}
+                        zoom={zoom}
+                        style={{ height: '100%', width: '100%', flex: 1 }}
+                        zoomControl={false}
+                    >
+                        <ChangeView center={mapCenter} zoom={zoom} />
+
+                        {/* Dark Mode Tiles */}
+                        <TileLayer
+                            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a>'
+                            url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+                        />
+
+                        {/* Render Markers */}
+                        {incidents.map((incident) => (
+                            <Marker
+                                key={incident.id}
+                                position={[incident.latitude, incident.longitude]}
+                                icon={icon}
+                            >
+                                <Popup>
+                                    <strong>{incident.type}</strong><br />
+                                    {incident.description}
+                                </Popup>
+                            </Marker>
+                        ))}
+                    </MapContainer>
+                </div>
 
                 {/* Bottom Card: Area Summary */}
                 {showSummary && (
                     <Animated.View
                         entering={FadeInDown.duration(600)}
-                        className="absolute bottom-24 left-4 right-4 z-20 pointer-events-none" // pointer-events-none on wrapper to pass touches? No, card needs clicks.
+                        className="absolute bottom-24 left-4 right-4 z-20 pointer-events-none"
                         style={{ pointerEvents: 'box-none' }}
                     >
                         <View className="bg-slate-900/95 border border-slate-700/50 rounded-3xl p-5 shadow-2xl backdrop-blur-xl pointer-events-auto">
@@ -212,7 +166,7 @@ const SafetyMapScreen = ({ navigation }) => {
                                 </View>
                                 <View className="flex-1">
                                     <Text className="text-white font-bold text-base">Risco Elevado</Text>
-                                    <Text className="text-slate-400 text-sm">12 incidentes reportados</Text>
+                                    <Text className="text-slate-400 text-sm">{incidents.length} incidentes reportados</Text>
                                 </View>
                                 <TouchableOpacity
                                     onPress={() => navigation.navigate('SafeRoute')}
@@ -224,17 +178,17 @@ const SafetyMapScreen = ({ navigation }) => {
 
                             <View className="flex-row justify-between px-4">
                                 <View className="items-center">
-                                    <Text className="text-white font-black text-2xl">8</Text>
+                                    <Text className="text-white font-black text-2xl">{incidents.filter(i => i.type && i.type.toLowerCase().includes('roubo')).length}</Text>
                                     <Text className="text-slate-500 text-xs font-bold uppercase">Roubos</Text>
                                 </View>
                                 <View className="w-[1px] h-8 bg-slate-800" />
                                 <View className="items-center">
-                                    <Text className="text-white font-black text-2xl">3</Text>
+                                    <Text className="text-white font-black text-2xl">{incidents.filter(i => i.type && i.type.toLowerCase().includes('furto')).length}</Text>
                                     <Text className="text-slate-500 text-xs font-bold uppercase">Furtos</Text>
                                 </View>
                                 <View className="w-[1px] h-8 bg-slate-800" />
                                 <View className="items-center">
-                                    <Text className="text-white font-black text-2xl">1</Text>
+                                    <Text className="text-white font-black text-2xl">{incidents.filter(i => i.type && !i.type.toLowerCase().includes('roubo') && !i.type.toLowerCase().includes('furto')).length}</Text>
                                     <Text className="text-slate-500 text-xs font-bold uppercase">Outros</Text>
                                 </View>
                             </View>
@@ -243,7 +197,9 @@ const SafetyMapScreen = ({ navigation }) => {
                 )}
 
                 {/* FAB - My Location */}
-                <TouchableOpacity className="absolute bottom-28 right-4 w-12 h-12 bg-slate-800 rounded-full items-center justify-center shadow-lg border border-slate-700 z-10 active:scale-95">
+                <TouchableOpacity
+                    onPress={handleMyLocation}
+                    className="absolute bottom-28 right-4 w-12 h-12 bg-slate-800 rounded-full items-center justify-center shadow-lg border border-slate-700 z-10 active:scale-95">
                     <MaterialIcons name="my-location" size={24} color="#e2e8f0" />
                 </TouchableOpacity>
 

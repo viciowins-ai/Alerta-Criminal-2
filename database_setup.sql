@@ -68,3 +68,55 @@ create policy "Usuários logados podem criar incidentes" on public.incidents
 
 -- create policy "Usuários logados podem fazer upload" on storage.objects
 --   for insert with check ( bucket_id = 'app-uploads' and auth.role() = 'authenticated' );
+
+-- Tabela de Contatos de Emergência
+create table public.emergency_contacts (
+  id uuid default uuid_generate_v4() primary key,
+  user_id uuid references public.profiles(id) not null,
+  name text not null,
+  phone text not null,
+  relationship text,
+  created_at timestamp with time zone default timezone('utc'::text, now()) not null
+);
+
+alter table public.emergency_contacts enable row level security;
+
+create policy "Usuários podem ver seus próprios contatos" on public.emergency_contacts
+  for select using (auth.uid() = user_id);
+
+create policy "Usuários podem criar seus próprios contatos" on public.emergency_contacts
+  for insert with check (auth.uid() = user_id);
+
+create policy "Usuários podem deletar seus próprios contatos" on public.emergency_contacts
+  for delete using (auth.uid() = user_id);
+
+-- Tabela de Comentários (Feed)
+create table public.comments (
+  id uuid default uuid_generate_v4() primary key,
+  user_id uuid references public.profiles(id) not null,
+  incident_id uuid references public.incidents(id) on delete cascade not null,
+  content text not null,
+  created_at timestamp with time zone default timezone('utc'::text, now()) not null
+);
+
+alter table public.comments enable row level security;
+
+create policy "Comentários visíveis para todos" on public.comments for select using (true);
+create policy "Usuários podem comentar" on public.comments for insert with check (auth.role() = 'authenticated');
+
+-- Tabela de Likes (Feed)
+create table public.likes (
+  id uuid default uuid_generate_v4() primary key,
+  user_id uuid references public.profiles(id) not null,
+  incident_id uuid references public.incidents(id) on delete cascade not null,
+  created_at timestamp with time zone default timezone('utc'::text, now()) not null,
+  unique(user_id, incident_id) -- Um like por usuário por post
+);
+
+alter table public.likes enable row level security;
+
+create policy "Likes visíveis para todos" on public.likes for select using (true);
+create policy "Usuários podem dar like" on public.likes for insert with check (auth.role() = 'authenticated');
+create policy "Usuários podem remover like" on public.likes for delete using (auth.uid() = user_id);
+
+

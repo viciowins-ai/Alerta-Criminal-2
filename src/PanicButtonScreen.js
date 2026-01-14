@@ -1,5 +1,6 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, Dimensions, Alert } from 'react-native';
+import { View, Text, TouchableOpacity, Dimensions, Alert, Vibration, Platform } from 'react-native';
+import * as Location from 'expo-location';
 import { MaterialIcons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
@@ -17,16 +18,26 @@ const PanicButtonScreen = ({ navigation }) => {
     const scale = useSharedValue(1);
 
     const handlePressIn = () => {
+        console.log("SOS: Press In Detected");
         setIsPressing(true);
+        if (Platform.OS !== 'web') Vibration.vibrate(50);
         scale.value = withTiming(0.9, { duration: 100 });
 
         // Start 3-second timer
         let currentProgress = 0;
         progressInterval.current = setInterval(() => {
-            currentProgress += 1; // 10ms steps
-            setProgress(currentProgress / 300); // 300 steps = 3 seconds
+            currentProgress += 1;
+            const newProgress = currentProgress / 300;
+            setProgress(newProgress);
+
+            // Log every second
+            if (currentProgress % 100 === 0) console.log(`SOS: Holding... ${Math.round(newProgress * 100)}%`);
+
+            // Pulse vibration every second
+            if (currentProgress % 100 === 0 && Platform.OS !== 'web') Vibration.vibrate(20);
 
             if (currentProgress >= 300) {
+                console.log("SOS: Threshold reached, triggering!");
                 triggerSOS();
                 clearInterval(progressInterval.current);
             }
@@ -41,9 +52,23 @@ const PanicButtonScreen = ({ navigation }) => {
     };
 
     const triggerSOS = async () => {
-        // Haptic feedback would go here (Vibration.vibrate())
+        Vibration.vibrate([0, 500, 200, 500]); // SOS Pattern (roughly)
         setIsPressing(false);
-        setProgress(0); // Reset visual immediately or stick to 100%? Let's reset.
+        setProgress(0);
+
+        let lat = -23.550520;
+        let long = -46.633308;
+
+        try {
+            let { status } = await Location.requestForegroundPermissionsAsync();
+            if (status === 'granted') {
+                let location = await Location.getCurrentPositionAsync({});
+                lat = location.coords.latitude;
+                long = location.coords.longitude;
+            }
+        } catch (e) {
+            console.log("Erro ao obter localização real:", e);
+        }
 
         // Insert into Supabase
         try {
@@ -51,10 +76,10 @@ const PanicButtonScreen = ({ navigation }) => {
                 await supabase.from('incidents').insert({
                     type: 'SOS',
                     description: 'PEDIDO DE SOCORRO IMEDIATO! O usuário acionou o botão de pânico.',
-                    latitude: -23.550520, // Mock location for now
-                    longitude: -46.633308,
+                    latitude: lat,
+                    longitude: long,
                     user_id: user.id,
-                    status: 'critical' // You might need to add this column or handle it in description
+                    status: 'critical'
                 });
             }
         } catch (e) {
@@ -109,6 +134,7 @@ const PanicButtonScreen = ({ navigation }) => {
                     onPressIn={handlePressIn}
                     onPressOut={handlePressOut}
                     activeOpacity={1}
+                    style={Platform.OS === 'web' ? { userSelect: 'none', cursor: 'pointer' } : {}}
                 >
                     <Animated.View
                         style={[animatedButtonStyle]}

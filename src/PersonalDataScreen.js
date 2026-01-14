@@ -1,25 +1,87 @@
-import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, ScrollView, Alert, KeyboardAvoidingView, Platform, Image } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, TextInput, TouchableOpacity, ScrollView, Alert, KeyboardAvoidingView, Platform, Image, ActivityIndicator } from 'react-native';
+import { supabase } from './lib/supabase';
+import { useAuth } from './context/AuthContext';
 import { MaterialIcons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 
 const PersonalDataScreen = ({ navigation }) => {
+    const { user } = useAuth();
+    const [loading, setLoading] = useState(false);
     const [formData, setFormData] = useState({
-        name: 'Humberto Silva',
-        email: 'humberto@example.com',
-        phone: '(11) 99999-9999',
-        cpf: '123.456.789-00'
+        name: '',
+        email: '',
+        phone: '',
+        cpf: ''
     });
+
+    useEffect(() => {
+        if (user) {
+            fetchProfile();
+            // Pre-fill email from auth user if available
+            setFormData(prev => ({ ...prev, email: user.email }));
+        }
+    }, [user]);
+
+    const fetchProfile = async () => {
+        setLoading(true);
+        try {
+            const { data, error } = await supabase
+                .from('profiles')
+                .select('*')
+                .eq('id', user.id)
+                .single();
+
+            if (error && error.code !== 'PGRST116') {
+                console.error(error);
+                Alert.alert('Erro', 'Falha ao carregar perfil.');
+            } else if (data) {
+                setFormData({
+                    name: data.full_name || '',
+                    email: user.email, // Keep auth email as truth
+                    phone: data.phone || '',
+                    cpf: data.cpf || ''
+                });
+            }
+        } catch (error) {
+            console.error('Fetch Profile Error:', error);
+        } finally {
+            setLoading(false);
+        }
+    };
 
     const handleChange = (key, value) => {
         setFormData(prev => ({ ...prev, [key]: value }));
     };
 
-    const handleSave = () => {
-        // Implement save logic here (e.g., call API or update context)
-        Alert.alert('Sucesso', 'Seus dados foram atualizados com sucesso!');
-        navigation.goBack();
+    const handleSave = async () => {
+        setLoading(true);
+        try {
+            const updates = {
+                id: user.id,
+                full_name: formData.name,
+                phone: formData.phone,
+                // CPF is usually not editable by normal update, but if it is empty we allow setting it?
+                // For now let's assume valid updates.
+                updated_at: new Date(),
+            };
+
+            const { error } = await supabase
+                .from('profiles')
+                .upsert(updates);
+
+            if (error) {
+                throw error;
+            }
+
+            Alert.alert('Sucesso', 'Seus dados foram atualizados com sucesso!');
+            navigation.goBack();
+        } catch (error) {
+            Alert.alert('Erro', error.message);
+        } finally {
+            setLoading(false);
+        }
     };
 
     const InputField = ({ label, value, onChangeText, keyboardType = 'default', editable = true, icon }) => (

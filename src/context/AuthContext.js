@@ -37,15 +37,27 @@ export const AuthProvider = ({ children }) => {
 
     const signIn = async (email, password) => {
         setLoading(true);
-        const { error } = await supabase.auth.signInWithPassword({
-            email,
-            password,
-        });
+        try {
+            const { error } = await supabase.auth.signInWithPassword({
+                email,
+                password,
+            });
 
-        if (error) {
-            Alert.alert('Erro no Login', error.message);
+            if (error) {
+                let msg = error.message;
+                if (msg.includes('Email not confirmed')) {
+                    msg = 'E-mail não confirmado. Verifique sua caixa de entrada (e spam) e clique no link de ativação.';
+                } else if (msg.includes('Invalid login credentials')) {
+                    msg = 'E-mail ou senha incorretos.';
+                }
+                Alert.alert('Erro no Login', msg);
+            }
+        } catch (err) {
+            Alert.alert('Erro de Conexão', 'Não foi possível conectar ao servidor. Verifique sua internet ou a URL do projeto.');
+            console.error("SignIn Error:", err);
+        } finally {
+            setLoading(false);
         }
-        setLoading(false);
     };
 
     const signOut = async () => {
@@ -55,28 +67,32 @@ export const AuthProvider = ({ children }) => {
 
     const signUp = async (email, password, metadata = {}) => {
         setLoading(true);
-        const { data, error } = await supabase.auth.signUp({
-            email,
-            password,
-            options: {
-                data: metadata // Ex: nome, telefone
+        try {
+            const { data, error } = await supabase.auth.signUp({
+                email,
+                password,
+                options: {
+                    data: metadata // Ex: nome, telefone
+                }
+            });
+
+            if (error) {
+                Alert.alert('Erro no Cadastro', error.message);
+                return false;
             }
-        });
 
-        if (error) {
-            Alert.alert('Erro no Cadastro', error.message);
+            if (data.user) {
+                // Return success and whether a session was established (auto-login)
+                return { success: true, session: data.session };
+            }
+            return { success: false };
+        } catch (err) {
+            Alert.alert('Erro de Conexão', 'Falha ao conectar ao servidor. Tente novamente mais tarde.');
+            console.error("SignUp Error:", err);
+            return { success: false };
+        } finally {
             setLoading(false);
-            return false;
         }
-
-        if (data.user) {
-            // Sucesso! Retorna true para a tela lidar com a navegação
-            setLoading(false);
-            return true;
-        }
-
-        setLoading(false);
-        return false;
     };
 
     const signInAsGuest = async () => {

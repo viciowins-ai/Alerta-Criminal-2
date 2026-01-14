@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { supabase } from './lib/supabase';
 import { View, Text, TextInput, TouchableOpacity, ScrollView, Alert, Switch, KeyboardAvoidingView, Platform } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -17,7 +18,7 @@ const SecuritySettingsScreen = ({ navigation }) => {
         setPasswords(prev => ({ ...prev, [key]: value }));
     };
 
-    const handleUpdatePassword = () => {
+    const handleUpdatePassword = async () => {
         if (passwords.new !== passwords.confirm) {
             Alert.alert('Erro', 'As novas senhas não conferem.');
             return;
@@ -26,9 +27,15 @@ const SecuritySettingsScreen = ({ navigation }) => {
             Alert.alert('Erro', 'A nova senha deve ter pelo menos 6 caracteres.');
             return;
         }
-        // Implement password update logic here
-        Alert.alert('Sucesso', 'Sua senha foi atualizada com sucesso!');
-        setPasswords({ current: '', new: '', confirm: '' });
+
+        const { error } = await supabase.auth.updateUser({ password: passwords.new });
+
+        if (error) {
+            Alert.alert('Erro', 'Não foi possível atualizar a senha. ' + error.message);
+        } else {
+            Alert.alert('Sucesso', 'Sua senha foi atualizada com sucesso!');
+            setPasswords({ current: '', new: '', confirm: '' });
+        }
     };
 
     const PasswordInput = ({ label, value, onChangeText, placeholder }) => (

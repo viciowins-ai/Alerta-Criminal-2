@@ -28,16 +28,27 @@ const RegisterScreen = ({ navigation }) => {
             return;
         }
 
-        const success = await signUp(email, password, { full_name: name });
+        const result = await signUp(email, password, { full_name: name });
+        // result is now { success: boolean, session: object|null }
 
-        if (success) {
-            Alert.alert(
-                'Conta Criada com Sucesso!',
-                'Enviamos um e-mail de confirmação para você. Por favor, verifique sua caixa de entrada (e spam) e clique no link para ativar sua conta antes de fazer login.',
-                [
-                    { text: 'Ir para Login', onPress: () => navigation.navigate('Login') }
-                ]
-            );
+        if (result && result.success) {
+            if (result.session) {
+                // Auto-logged in
+                // Usually AuthContext listener handles the state change, but we can show a welcome or let it redirect.
+                // If the listener works, the user state updates and navigating might not be needed if App handles it, 
+                // but usually we stick to the flow or just show a toast.
+                // For now, let's just let the AuthContext listener handle the redirect if user is set.
+                // But in case we need to manually go to login (unlikely if session exists), we can.
+            } else {
+                // Session is null -> Email confirmation required
+                Alert.alert(
+                    'Verifique seu E-mail',
+                    'Conta criada com sucesso! Por favor, verifique seu e-mail para confirmar sua conta antes de fazer login.',
+                    [
+                        { text: 'OK', onPress: () => navigation.navigate('Login') }
+                    ]
+                );
+            }
         }
     };
 
