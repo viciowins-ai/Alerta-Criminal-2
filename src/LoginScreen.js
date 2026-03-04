@@ -1,111 +1,109 @@
-import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform, ScrollView, Alert, ActivityIndicator } from 'react-native';
-import { MaterialIcons, FontAwesome5 } from '@expo/vector-icons';
+import React from 'react';
+import { View, Text, TouchableOpacity, Platform, Alert, ActivityIndicator, Image, StyleSheet } from 'react-native';
+import { FontAwesome5 } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { useAuth } from './context/AuthContext';
 
 const LoginScreen = ({ navigation }) => {
-    const { signIn, signInAsGuest, loading } = useAuth();
-    const [email, setEmail] = useState('');
-    const [password, setPassword] = useState('');
-
-    const handleLogin = async () => {
-        if (!email || !password) {
-            Alert.alert('Atenção', 'Preencha todos os campos.');
-            return;
-        }
-        await signIn(email, password);
-    };
+    const { signInAsGuest, signInWithGoogle, loading } = useAuth();
 
     return (
-        <SafeAreaView className="flex-1 bg-background-dark">
+        <SafeAreaView className="flex-1 bg-[#0a0f1c]">
             <StatusBar style="light" />
-            <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} className="flex-1">
-                <ScrollView contentContainerStyle={{ flexGrow: 1, justifyContent: 'center' }} className="px-6">
 
-                    {/* Header Logo */}
-                    <View className="items-center mb-10">
-                        <View className="w-20 h-20 bg-slate-800 rounded-3xl items-center justify-center border border-slate-700 mb-4 shadow-lg shadow-blue-900/20 transform rotate-3">
-                            <FontAwesome5 name="shield-alt" size={40} color="#3b82f6" style={{ transform: [{ rotate: '-3deg' }] }} />
-                        </View>
-                        <Text className="text-white font-bold text-3xl tracking-tight">Alerta Criminal</Text>
-                        <Text className="text-slate-400 text-base mt-1">Sua segurança em primeiro lugar</Text>
+            <View className="flex-1 justify-center items-center px-8">
+                {/* Efeitos de Luz de Fundo (Abstract Glow) */}
+                <View className="absolute top-1/4 w-72 h-72 bg-blue-600 rounded-full opacity-10" style={styles.glow} blurRadius={Platform.OS === 'ios' ? 70 : 0} />
+                <View className="absolute bottom-1/4 -right-10 w-64 h-64 bg-indigo-600 rounded-full opacity-10" style={styles.glow} blurRadius={Platform.OS === 'ios' ? 70 : 0} />
+
+                {/* Bloco de Logo e Textos Premium */}
+                <View className="items-center mb-16 w-full mt-10">
+                    <View className="w-24 h-24 bg-slate-800/90 rounded-[32px] items-center justify-center border border-slate-700/60 mb-8" style={styles.iconShadow}>
+                        <FontAwesome5 name="shield-alt" size={46} color="#3b82f6" style={{ transform: [{ rotate: '-5deg' }] }} />
                     </View>
 
-                    {/* Form */}
-                    <View className="mb-6">
-                        <Text className="text-slate-300 font-bold mb-2 ml-1">E-mail</Text>
-                        <View className="bg-slate-800/80 border border-slate-700 rounded-xl px-4 h-14 flex-row items-center mb-4 focus:border-blue-500 transition-colors">
-                            <MaterialIcons name="email" size={20} color="#64748b" style={{ marginRight: 10 }} />
-                            <TextInput
-                                className="flex-1 text-white text-base"
-                                placeholder="seu@email.com"
-                                placeholderTextColor="#64748b"
-                                keyboardType="email-address"
-                                autoCapitalize="none"
-                                value={email}
-                                onChangeText={setEmail}
-                            />
-                        </View>
+                    <Text className="text-white font-extrabold text-[38px] tracking-tighter text-center">
+                        Alerta Criminal
+                    </Text>
+                    <Text className="text-blue-400 font-bold text-sm tracking-[0.2em] mt-3 uppercase text-center opacity-90">
+                        Inteligência Coletiva
+                    </Text>
 
-                        <Text className="text-slate-300 font-bold mb-2 ml-1">Senha</Text>
-                        <View className="bg-slate-800/80 border border-slate-700 rounded-xl px-4 h-14 flex-row items-center mb-2 focus:border-blue-500 transition-colors">
-                            <MaterialIcons name="lock" size={20} color="#64748b" style={{ marginRight: 10 }} />
-                            <TextInput
-                                className="flex-1 text-white text-base"
-                                placeholder="••••••••"
-                                placeholderTextColor="#64748b"
-                                secureTextEntry
-                                value={password}
-                                onChangeText={setPassword}
-                            />
-                        </View>
+                    <Text className="text-slate-400 text-center text-base mt-6 leading-6 px-2 font-medium">
+                        Junte-se a primeira rede de radar comunitário. Reporte riscos reais em segundos e mapeie lugares perigosos.
+                    </Text>
+                </View>
 
-                        <TouchableOpacity className="self-end p-2">
-                            <Text className="text-blue-400 font-bold text-sm">Esqueci minha senha</Text>
-                        </TouchableOpacity>
-                    </View>
-
-                    {/* Login Button */}
+                {/* Botões de Acesso Rapido */}
+                <View className="w-full relative z-10 gap-5 mb-auto">
+                    {/* Botão Google Elevado Escala */}
                     <TouchableOpacity
-                        onPress={handleLogin}
+                        onPress={signInWithGoogle}
                         disabled={loading}
-                        className="bg-blue-600 h-14 rounded-xl items-center justify-center shadow-lg shadow-blue-600/30 active:bg-blue-700 mb-4"
+                        className="w-full bg-white h-16 rounded-full flex-row items-center px-6 shadow-xl active:bg-gray-200"
+                        style={styles.googleBtn}
                     >
                         {loading ? (
-                            <ActivityIndicator color="white" />
+                            <ActivityIndicator color="#1f2937" className="mx-auto" />
                         ) : (
-                            <Text className="text-white font-bold text-lg">Entrar</Text>
+                            <>
+                                <Image
+                                    source={{ uri: 'https://cdn1.iconfinder.com/data/icons/google-s-logo/150/Google_Icons-09-512.png' }}
+                                    style={{ width: 28, height: 28, marginRight: 16 }}
+                                    resizeMode="contain"
+                                />
+                                <Text className="flex-1 text-center font-extrabold text-[#111827] text-[17px] mr-8 tracking-tight">
+                                    Continuar com o Google
+                                </Text>
+                            </>
                         )}
                     </TouchableOpacity>
 
-                    {/* Guest Login Button */}
+                    {/* Botão Visitante Estilo Glass */}
                     <TouchableOpacity
                         onPress={signInAsGuest}
                         disabled={loading}
-                        className="bg-slate-700 h-14 rounded-xl items-center justify-center border border-slate-600 active:bg-slate-600 mb-6"
+                        className="w-full bg-slate-800/40 h-16 rounded-full items-center justify-center border border-slate-700/60 active:bg-slate-800/60"
                     >
-                        <Text className="text-white font-bold text-base">Entrar como Visitante (Teste)</Text>
+                        <Text className="text-slate-300 font-semibold text-[15px]">Ativar Modo Testador 👀</Text>
                     </TouchableOpacity>
+                </View>
 
-                    {/* Footer */}
-                    <View className="flex-row justify-center items-center gap-1">
-                        <Text className="text-slate-400">Não tem uma conta?</Text>
-                        <TouchableOpacity onPress={() => navigation.navigate('Register')}>
-                            <Text className="text-blue-400 font-bold text-base">Cadastre-se</Text>
-                        </TouchableOpacity>
-                    </View>
+                {/* Links Secundários */}
+                <View className="absolute bottom-10 items-center justify-center w-full">
+                    <Text className="text-slate-500 text-[11px] text-center leading-5 px-10">
+                        Ao continuar, você concorda com os nossos Termos de Uso e entende nossa Política de Privacidade.
+                    </Text>
 
-                    {/* Admin Link (Hidden/Subtle) */}
-                    <TouchableOpacity onPress={() => navigation.navigate('AdminLogin')} className="mt-12 self-center opacity-50">
-                        <Text className="text-slate-600 text-xs uppercase tracking-widest">Acesso Administrativo</Text>
+                    <TouchableOpacity onPress={() => navigation.navigate('AdminLogin')} className="mt-6 p-2">
+                        <Text className="text-slate-700 font-bold text-[10px] uppercase tracking-widest">Acesso Restrito</Text>
                     </TouchableOpacity>
+                </View>
 
-                </ScrollView>
-            </KeyboardAvoidingView>
+            </View>
         </SafeAreaView>
     );
 };
+
+const styles = StyleSheet.create({
+    glow: {
+        transform: [{ scale: 1.5 }],
+    },
+    iconShadow: {
+        shadowColor: '#3b82f6',
+        shadowOffset: { width: 0, height: 10 },
+        shadowOpacity: 0.3,
+        shadowRadius: 20,
+        elevation: 10,
+    },
+    googleBtn: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.15,
+        shadowRadius: 10,
+        elevation: 5,
+    }
+});
 
 export default LoginScreen;

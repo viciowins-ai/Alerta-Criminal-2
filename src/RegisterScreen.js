@@ -1,56 +1,12 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform, ScrollView, Alert, ActivityIndicator } from 'react-native';
-import { MaterialIcons, FontAwesome5, Ionicons } from '@expo/vector-icons';
+import { View, Text, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform, ScrollView, Alert, ActivityIndicator, Image } from 'react-native';
+import { MaterialIcons, FontAwesome5, Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { useAuth } from './context/AuthContext';
 
 const RegisterScreen = ({ navigation }) => {
-    const { signUp, loading } = useAuth();
-    const [name, setName] = useState('');
-    const [email, setEmail] = useState('');
-    const [password, setPassword] = useState('');
-    const [confirmPassword, setConfirmPassword] = useState('');
-
-    const handleRegister = async () => {
-        if (!name || !email || !password || !confirmPassword) {
-            Alert.alert('Erro', 'Preencha todos os campos.');
-            return;
-        }
-
-        if (password !== confirmPassword) {
-            Alert.alert('Erro', 'As senhas não coincidem.');
-            return;
-        }
-
-        if (password.length < 6) {
-            Alert.alert('Erro', 'A senha deve ter pelo menos 6 caracteres.');
-            return;
-        }
-
-        const result = await signUp(email, password, { full_name: name });
-        // result is now { success: boolean, session: object|null }
-
-        if (result && result.success) {
-            if (result.session) {
-                // Auto-logged in
-                // Usually AuthContext listener handles the state change, but we can show a welcome or let it redirect.
-                // If the listener works, the user state updates and navigating might not be needed if App handles it, 
-                // but usually we stick to the flow or just show a toast.
-                // For now, let's just let the AuthContext listener handle the redirect if user is set.
-                // But in case we need to manually go to login (unlikely if session exists), we can.
-            } else {
-                // Session is null -> Email confirmation required
-                Alert.alert(
-                    'Verifique seu E-mail',
-                    'Conta criada com sucesso! Por favor, verifique seu e-mail para confirmar sua conta antes de fazer login.',
-                    [
-                        { text: 'OK', onPress: () => navigation.navigate('Login') }
-                    ]
-                );
-            }
-        }
-    };
+    const { signInWithGoogle, loading } = useAuth();
 
     return (
         <SafeAreaView className="flex-1 bg-background-dark">
@@ -63,83 +19,23 @@ const RegisterScreen = ({ navigation }) => {
                     </TouchableOpacity>
 
                     <Text className="text-white font-bold text-3xl mb-2">Crie sua conta</Text>
-                    <Text className="text-slate-400 text-base mb-8">Junte-se à comunidade e proteja o seu bairro.</Text>
+                    <Text className="text-slate-400 text-base mb-12">Junte-se à comunidade e proteja o seu bairro.</Text>
 
-                    {/* Form */}
-                    <View className="gap-5 mb-8">
-                        <View>
-                            <Text className="text-slate-300 font-bold mb-2 ml-1">Nome Completo</Text>
-                            <View className="bg-slate-800/80 border border-slate-700 rounded-xl px-4 h-14 flex-row items-center focus:border-blue-500">
-                                <MaterialIcons name="person" size={20} color="#64748b" style={{ marginRight: 10 }} />
-                                <TextInput
-                                    className="flex-1 text-white text-base"
-                                    placeholder="Ex: Ana Silva"
-                                    placeholderTextColor="#64748b"
-                                    value={name}
-                                    onChangeText={setName}
-                                />
-                            </View>
-                        </View>
-
-                        <View>
-                            <Text className="text-slate-300 font-bold mb-2 ml-1">E-mail</Text>
-                            <View className="bg-slate-800/80 border border-slate-700 rounded-xl px-4 h-14 flex-row items-center focus:border-blue-500">
-                                <MaterialIcons name="email" size={20} color="#64748b" style={{ marginRight: 10 }} />
-                                <TextInput
-                                    className="flex-1 text-white text-base"
-                                    placeholder="seu@email.com"
-                                    placeholderTextColor="#64748b"
-                                    keyboardType="email-address"
-                                    autoCapitalize="none"
-                                    value={email}
-                                    onChangeText={setEmail}
-                                />
-                            </View>
-                        </View>
-
-                        <View>
-                            <Text className="text-slate-300 font-bold mb-2 ml-1">Senha</Text>
-                            <View className="bg-slate-800/80 border border-slate-700 rounded-xl px-4 h-14 flex-row items-center focus:border-blue-500">
-                                <MaterialIcons name="lock" size={20} color="#64748b" style={{ marginRight: 10 }} />
-                                <TextInput
-                                    className="flex-1 text-white text-base"
-                                    placeholder="Mínimo 6 caracteres"
-                                    placeholderTextColor="#64748b"
-                                    secureTextEntry
-                                    value={password}
-                                    onChangeText={setPassword}
-                                />
-                            </View>
-                        </View>
-
-                        <View>
-                            <Text className="text-slate-300 font-bold mb-2 ml-1">Confirmar Senha</Text>
-                            <View className="bg-slate-800/80 border border-slate-700 rounded-xl px-4 h-14 flex-row items-center focus:border-blue-500">
-                                <MaterialIcons name="lock-outline" size={20} color="#64748b" style={{ marginRight: 10 }} />
-                                <TextInput
-                                    className="flex-1 text-white text-base"
-                                    placeholder="Repita a senha"
-                                    placeholderTextColor="#64748b"
-                                    secureTextEntry
-                                    value={confirmPassword}
-                                    onChangeText={setConfirmPassword}
-                                />
-                            </View>
-                        </View>
-                    </View>
-
-
-                    {/* Register Button */}
+                    {/* Google Sign-up Button */}
                     <TouchableOpacity
-                        onPress={handleRegister}
+                        onPress={signInWithGoogle}
                         disabled={loading}
-                        className="bg-blue-600 h-14 rounded-xl items-center justify-center shadow-lg shadow-blue-600/30 active:bg-blue-700 mb-6"
+                        className="bg-white h-14 rounded-full border border-gray-300 flex-row items-center shadow-sm active:bg-gray-100 mb-6 px-4"
+                        style={{ elevation: 2 }}
                     >
-                        {loading ? (
-                            <ActivityIndicator color="white" />
-                        ) : (
-                            <Text className="text-white font-bold text-lg">Criar Conta</Text>
-                        )}
+                        <Image
+                            source={{ uri: 'https://cdn1.iconfinder.com/data/icons/google-s-logo/150/Google_Icons-09-512.png' }}
+                            style={{ width: 24, height: 24, marginRight: 16 }}
+                            resizeMode="contain"
+                        />
+                        <Text className="text-gray-600 font-semibold text-base flex-1 text-center" style={{ fontFamily: Platform.OS === 'ios' ? 'San Francisco' : 'Roboto' }}>
+                            Cadastrar com o Google
+                        </Text>
                     </TouchableOpacity>
 
                     {/* Footer */}

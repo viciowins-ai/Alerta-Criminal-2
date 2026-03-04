@@ -60,6 +60,27 @@ export const AuthProvider = ({ children }) => {
         }
     };
 
+    const signInWithGoogle = async () => {
+        setLoading(true);
+        try {
+            const { data, error } = await supabase.auth.signInWithOAuth({
+                provider: 'google',
+                options: {
+                    redirectTo: window?.location?.origin || 'http://localhost:8081',
+                },
+            });
+
+            if (error) {
+                Alert.alert('Erro', error.message);
+            }
+        } catch (err) {
+            console.error("Google SignIn Error:", err);
+            Alert.alert('Erro', 'Não foi possível conectar com o Google.');
+        } finally {
+            setLoading(false);
+        }
+    };
+
     const signOut = async () => {
         const { error } = await supabase.auth.signOut();
         if (error) Alert.alert('Erro ao sair', error.message);
@@ -108,7 +129,7 @@ export const AuthProvider = ({ children }) => {
     };
 
     return (
-        <AuthContext.Provider value={{ user, loading, signIn, signOut, signUp, signInAsGuest }}>
+        <AuthContext.Provider value={{ user, loading, signIn, signOut, signUp, signInAsGuest, signInWithGoogle }}>
             {children}
         </AuthContext.Provider>
     );

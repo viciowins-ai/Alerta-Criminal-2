@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, ActivityIndicator, Dimensions } from 'react-native';
-import MapView, { Marker, Circle, Polyline, PROVIDER_GOOGLE } from 'react-native-maps';
+import { WebView } from 'react-native-webview';
 import { MaterialIcons, Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
@@ -38,39 +38,9 @@ const SAFE_ROUTE_COORDS = [
     { latitude: -23.5460, longitude: -46.6320 }, // Destination
 ];
 
-// Pulsing Heat Zone Component (Now wraps a Map Marker or Circle)
-const PulsingHeatArea = ({ coordinate, color, delay = 0 }) => {
-    const opacity = useSharedValue(0.4);
-    const scale = useSharedValue(1);
+// We will use the Web-based Mapbox 3D rendering instead of manual native markers,
+// giving us the premium Google-like map performance and 3D buildings without breaking Expo Go!
 
-    useEffect(() => {
-        setTimeout(() => {
-            opacity.value = withRepeat(
-                withSequence(withTiming(0.1, { duration: 1500 }), withTiming(0.4, { duration: 1500 })),
-                -1, true
-            );
-            scale.value = withRepeat(
-                withSequence(withTiming(1.2, { duration: 2000 }), withTiming(1, { duration: 2000 })),
-                -1, true
-            );
-        }, delay);
-    }, []);
-
-    // We use a React Native Maps Circle for the physical zone, and we can animate its visual properties if supported, 
-    // but typically Map Circles are static in size. For pulsing effect on maps, we often use a custom Marker View.
-    // Here we will use a Custom Marker with an Animated View.
-
-    const animatedStyle = useAnimatedStyle(() => ({
-        transform: [{ scale: scale.value }],
-        opacity: opacity.value,
-    }));
-
-    return (
-        <Marker coordinate={coordinate} anchor={{ x: 0.5, y: 0.5 }}>
-            <Animated.View style={[{ width: 100, height: 100, borderRadius: 50, backgroundColor: color }, animatedStyle]} />
-        </Marker>
-    );
-};
 
 const SafetyMapScreen = () => {
     // Modes: 'idle' (default), 'scanning', 'analyzed' (risks shown), 'route' (safe path shown)
@@ -113,56 +83,13 @@ const SafetyMapScreen = () => {
                 {/* Main Map Content */}
                 <View className="relative flex-1 bg-slate-900 overflow-hidden">
 
-                    <MapView
-                        style={{ width: '100%', height: '100%' }}
-                        initialRegion={INITIAL_REGION}
-                        customMapStyle={DARK_MAP_STYLE}
-                    // provider={PROVIDER_GOOGLE} // Optional: Force Google Maps on iOS if configured
-                    >
-                        {/* Heat Zones - Only in Analyzed or Route Mode */}
-                        {(mapMode === 'analyzed' || mapMode === 'route') && (
-                            <>
-                                <PulsingHeatArea coordinate={HEAT_ZONE_1} color="rgba(220, 38, 38, 0.5)" delay={0} />
-                                <PulsingHeatArea coordinate={HEAT_ZONE_2} color="rgba(245, 158, 11, 0.4)" delay={1000} />
-
-                                {/* Incident Markers */}
-                                <Marker coordinate={INCIDENT_1}>
-                                    <View className="w-8 h-8 rounded-full bg-red-600 border-2 border-white items-center justify-center shadow-lg">
-                                        <MaterialIcons name="warning" size={16} color="white" />
-                                    </View>
-                                </Marker>
-                                <Marker coordinate={INCIDENT_2}>
-                                    <View className="w-8 h-8 rounded-full bg-amber-500 border-2 border-white items-center justify-center shadow-lg">
-                                        <MaterialIcons name="directions-run" size={16} color="white" />
-                                    </View>
-                                </Marker>
-                            </>
-                        )}
-
-                        {/* Safe Route - Only in Route Mode */}
-                        {mapMode === 'route' && (
-                            <>
-                                <Polyline
-                                    coordinates={SAFE_ROUTE_COORDS}
-                                    strokeColor="#22c55e"
-                                    strokeWidth={4}
-                                    lineDashPattern={[10, 5]}
-                                />
-                                {/* Destination Marker */}
-                                <Marker coordinate={SAFE_ROUTE_COORDS[SAFE_ROUTE_COORDS.length - 1]}>
-                                    <View className="w-8 h-8 bg-green-500 rounded-full items-center justify-center border-2 border-white">
-                                        <MaterialIcons name="flag" size={18} color="white" />
-                                    </View>
-                                </Marker>
-                                {/* User Marker (Simulated Start) */}
-                                <Marker coordinate={SAFE_ROUTE_COORDS[0]}>
-                                    <View className="w-8 h-8 bg-white rounded-full items-center justify-center shadow-xl">
-                                        <MaterialIcons name="navigation" size={20} color="#22c55e" />
-                                    </View>
-                                </Marker>
-                            </>
-                        )}
-                    </MapView>
+                    <WebView
+                        source={{ uri: 'https://alerta-criminal.vercel.app' }}
+                        style={{ width: '100%', height: '100%', backgroundColor: '#0f172a' }}
+                        geolocationEnabled={true}
+                        allowsInlineMediaPlayback={true}
+                        mediaPlaybackRequiresUserAction={false}
+                    />
 
                     {/* UI OVERLAYS */}
 
