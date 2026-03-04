@@ -1,155 +1,172 @@
-import React from 'react';
-import { View, Text, Image, TouchableOpacity, ScrollView } from 'react-native';
-import { MaterialIcons, FontAwesome5 } from '@expo/vector-icons';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { StatusBar } from 'expo-status-bar';
+import React from "react";
+import { View, Text, Image, TouchableOpacity, ScrollView } from "react-native";
+import { MaterialIcons, FontAwesome5 } from "@expo/vector-icons";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { StatusBar } from "expo-status-bar";
 
-import { useAuth } from './context/AuthContext';
-import { supabase } from './lib/supabase';
-import { useEffect, useState } from 'react';
+import { useAuth } from "./context/AuthContext";
+import { supabase } from "./lib/supabase";
+import { useEffect, useState } from "react";
 
 const UserProfileScreen = ({ navigation }) => {
-    const { user, signOut } = useAuth();
-    const [profile, setProfile] = useState(null);
+  const { user, signOut } = useAuth();
+  const [profile, setProfile] = useState(null);
 
-    useEffect(() => {
-        if (user) fetchProfile();
-    }, [user]);
+  useEffect(() => {
+    if (user) fetchProfile();
+  }, [user]);
 
-    const fetchProfile = async () => {
-        try {
-            const { data, error } = await supabase
-                .from('profiles')
-                .select('*')
-                .eq('id', user.id)
-                .single();
-            if (data) setProfile(data);
-        } catch (e) {
-            console.log(e);
-        }
-    };
+  const fetchProfile = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("id", user.id)
+        .single();
+      if (data) setProfile(data);
+    } catch (e) {
+      console.log(e);
+    }
+  };
 
-    const isGuest = !user;
+  const isGuest = !user;
 
-    const handleSignOut = async () => {
-        await signOut();
-    };
-    return (
-        <SafeAreaView className="flex-1 bg-background-dark">
-            <StatusBar style="light" />
+  const handleSignOut = async () => {
+    await signOut();
+  };
+  return (
+    <SafeAreaView className="flex-1 bg-background-dark">
+      <StatusBar style="light" />
 
-            {/* Header */}
-            <View className="flex-row items-center justify-between px-6 py-4">
-                <TouchableOpacity onPress={() => navigation.goBack()}>
-                    <MaterialIcons name="arrow-back" size={24} color="white" />
-                </TouchableOpacity>
-                <Text className="text-white font-bold text-lg">Perfil</Text>
-                <View style={{ width: 24 }} />
+      {/* Header */}
+      <View className="flex-row items-center justify-between px-6 py-4">
+        <TouchableOpacity onPress={() => navigation.goBack()}>
+          <MaterialIcons name="arrow-back" size={24} color="white" />
+        </TouchableOpacity>
+        <Text className="text-white font-bold text-lg">Perfil</Text>
+        <View style={{ width: 24 }} />
+      </View>
+
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingBottom: 100, paddingHorizontal: 24 }}
+      >
+        {/* Profile Info */}
+        <View className="items-center mb-8 mt-2">
+          <View className="w-28 h-28 rounded-full p-1 bg-blue-600 mb-4 shadow-xl shadow-blue-500/20">
+            <View className="w-full h-full rounded-full border-4 border-slate-900 overflow-hidden bg-slate-800 items-center justify-center">
+              {profile?.avatar_url ? (
+                <Image
+                  source={{ uri: profile.avatar_url }}
+                  className="w-full h-full"
+                  resizeMode="cover"
+                />
+              ) : (
+                <FontAwesome5 name="user" size={40} color="#94a3b8" />
+              )}
             </View>
+          </View>
+          <Text className="text-2xl font-bold text-white">
+            {isGuest
+              ? "Visitante"
+              : profile?.full_name || user?.email || "Usuário"}
+          </Text>
+          {isGuest && (
+            <Text className="text-slate-400 text-sm mt-1">
+              Modo de Visualização
+            </Text>
+          )}
+        </View>
 
-            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 100, paddingHorizontal: 24 }}>
+        {/* Card: Nível de Contribuição */}
+        <TouchableOpacity
+          onPress={() => navigation.navigate("LevelsRewards")}
+          className="bg-slate-800/50 rounded-2xl p-5 border border-slate-700/50 mb-4"
+        >
+          <Text className="text-white font-bold text-base mb-4">
+            Nível de Contribuição
+          </Text>
+          <View className="flex-row items-center gap-4 mb-4">
+            <View className="w-12 h-12 bg-yellow-900/30 rounded-xl items-center justify-center border border-yellow-500/20">
+              <FontAwesome5 name="shield-alt" size={20} color="#fbbf24" />
+            </View>
+            <Text className="text-white font-bold text-lg">
+              {profile?.guardian_level || "Novo Guardião"}
+            </Text>
+          </View>
+          {/* Progress Bar */}
+          <View className="flex-row gap-2 items-center">
+            <View className="h-2 bg-slate-700 flex-1 rounded-full overflow-hidden">
+              <View
+                className="h-full bg-yellow-500"
+                style={{
+                  width: `${Math.min(((profile?.points || 0) / 100) * 100, 100)}%`,
+                }}
+              />
+            </View>
+          </View>
+        </TouchableOpacity>
 
-                {/* Profile Info */}
-                <View className="items-center mb-8 mt-2">
-                    <View className="w-28 h-28 rounded-full p-1 bg-blue-600 mb-4 shadow-xl shadow-blue-500/20">
-                        <View className="w-full h-full rounded-full border-4 border-slate-900 overflow-hidden bg-slate-800 items-center justify-center">
-                            {profile?.avatar_url ? (
-                                <Image
-                                    source={{ uri: profile.avatar_url }}
-                                    className="w-full h-full"
-                                    resizeMode="cover"
-                                />
-                            ) : (
-                                <FontAwesome5 name="user" size={40} color="#94a3b8" />
-                            )}
-                        </View>
-                    </View>
-                    <Text className="text-2xl font-bold text-white">
-                        {isGuest ? "Visitante" : (profile?.full_name || user?.email || "Usuário")}
-                    </Text>
-                    {isGuest && (
-                        <Text className="text-slate-400 text-sm mt-1">Modo de Visualização</Text>
-                    )}
-                </View>
+        {/* Card: Estatísticas de Alerta */}
+        <View className="bg-slate-800/50 rounded-2xl p-5 border border-slate-700/50 mb-4">
+          <Text className="text-white font-bold text-base mb-4">
+            Estatísticas de Alerta
+          </Text>
 
-                {/* Card: Nível de Contribuição */}
-                <TouchableOpacity
-                    onPress={() => navigation.navigate('LevelsRewards')}
-                    className="bg-slate-800/50 rounded-2xl p-5 border border-slate-700/50 mb-4"
-                >
-                    <Text className="text-white font-bold text-base mb-4">Nível de Contribuição</Text>
-                    <View className="flex-row items-center gap-4 mb-4">
-                        <View className="w-12 h-12 bg-yellow-900/30 rounded-xl items-center justify-center border border-yellow-500/20">
-                            <FontAwesome5 name="shield-alt" size={20} color="#fbbf24" />
-                        </View>
-                        <Text className="text-white font-bold text-lg">{profile?.guardian_level || "Novo Guardião"}</Text>
-                    </View>
-                    {/* Progress Bar */}
-                    <View className="flex-row gap-2 items-center">
-                        <View className="h-2 bg-slate-700 flex-1 rounded-full overflow-hidden">
-                            <View
-                                className="h-full bg-yellow-500"
-                                style={{ width: `${Math.min(((profile?.points || 0) / 100) * 100, 100)}%` }}
-                            />
-                        </View>
-                    </View>
-                </TouchableOpacity>
+          <View className="flex-row justify-between items-center py-2 border-b border-slate-700/50">
+            <Text className="text-slate-400">Alertas Reportados</Text>
+            <Text className="text-white font-bold">25</Text>
+          </View>
+          <View className="flex-row justify-between items-center py-2 pt-3">
+            <Text className="text-slate-400">Alertas Verificados</Text>
+            <Text className="text-white font-bold">18</Text>
+          </View>
+        </View>
 
-                {/* Card: Estatísticas de Alerta */}
-                <View className="bg-slate-800/50 rounded-2xl p-5 border border-slate-700/50 mb-4">
-                    <Text className="text-white font-bold text-base mb-4">Estatísticas de Alerta</Text>
+        {/* Card: Minha Assinatura Premium */}
+        <TouchableOpacity
+          onPress={() => navigation.navigate("PremiumTips")}
+          className="bg-slate-800/50 rounded-2xl p-5 border border-slate-700/50 mb-8"
+        >
+          <Text className="text-white font-bold text-base mb-4">
+            Minha Assinatura Premium
+          </Text>
+          <View className="flex-row items-center justify-between">
+            <View className="flex-row items-center gap-3">
+              <FontAwesome5 name="medal" size={20} color="#3b82f6" />
+              <Text className="text-slate-300">Plano Ativo</Text>
+            </View>
+            <Text className="text-blue-500 font-bold">Gerenciar</Text>
+          </View>
+        </TouchableOpacity>
 
-                    <View className="flex-row justify-between items-center py-2 border-b border-slate-700/50">
-                        <Text className="text-slate-400">Alertas Reportados</Text>
-                        <Text className="text-white font-bold">25</Text>
-                    </View>
-                    <View className="flex-row justify-between items-center py-2 pt-3">
-                        <Text className="text-slate-400">Alertas Verificados</Text>
-                        <Text className="text-white font-bold">18</Text>
-                    </View>
-                </View>
+        {/* Buttons */}
+        <TouchableOpacity
+          onPress={() => navigation.navigate("PersonalData")}
+          className="w-full bg-slate-800 h-14 rounded-xl items-center justify-center border border-blue-900/50 mb-4 active:bg-slate-700"
+        >
+          <View className="flex-row gap-2 items-center">
+            <MaterialIcons name="edit" size={20} color="#60a5fa" />
+            <Text className="text-blue-400 font-bold text-base">
+              Editar Perfil
+            </Text>
+          </View>
+        </TouchableOpacity>
 
-                {/* Card: Minha Assinatura Premium */}
-                <TouchableOpacity
-                    onPress={() => navigation.navigate('PremiumTips')}
-                    className="bg-slate-800/50 rounded-2xl p-5 border border-slate-700/50 mb-8"
-                >
-                    <Text className="text-white font-bold text-base mb-4">Minha Assinatura Premium</Text>
-                    <View className="flex-row items-center justify-between">
-                        <View className="flex-row items-center gap-3">
-                            <FontAwesome5 name="medal" size={20} color="#3b82f6" />
-                            <Text className="text-slate-300">Plano Ativo</Text>
-                        </View>
-                        <Text className="text-blue-500 font-bold">Gerenciar</Text>
-                    </View>
-                </TouchableOpacity>
-
-                {/* Buttons */}
-                <TouchableOpacity
-                    onPress={() => navigation.navigate('PersonalData')}
-                    className="w-full bg-slate-800 h-14 rounded-xl items-center justify-center border border-blue-900/50 mb-4 active:bg-slate-700"
-                >
-                    <View className="flex-row gap-2 items-center">
-                        <MaterialIcons name="edit" size={20} color="#60a5fa" />
-                        <Text className="text-blue-400 font-bold text-base">Editar Perfil</Text>
-                    </View>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                    onPress={handleSignOut}
-                    className="w-full bg-red-900/10 h-14 rounded-xl items-center justify-center border border-red-900/30 active:bg-red-900/20"
-                >
-                    <View className="flex-row gap-2 items-center">
-                        <MaterialIcons name="logout" size={20} color="#ef4444" />
-                        <Text className="text-red-500 font-bold text-base">
-                            {isGuest ? "Sair / Fazer Login" : "Sair"}
-                        </Text>
-                    </View>
-                </TouchableOpacity>
-
-            </ScrollView>
-        </SafeAreaView>
-    );
+        <TouchableOpacity
+          onPress={handleSignOut}
+          className="w-full bg-red-900/10 h-14 rounded-xl items-center justify-center border border-red-900/30 active:bg-red-900/20"
+        >
+          <View className="flex-row gap-2 items-center">
+            <MaterialIcons name="logout" size={20} color="#ef4444" />
+            <Text className="text-red-500 font-bold text-base">
+              {isGuest ? "Sair / Fazer Login" : "Sair"}
+            </Text>
+          </View>
+        </TouchableOpacity>
+      </ScrollView>
+    </SafeAreaView>
+  );
 };
 
 export default UserProfileScreen;
