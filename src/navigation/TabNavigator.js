@@ -26,11 +26,14 @@ const TabNavigator = () => {
             screenOptions={({ route }) => ({
                 headerShown: false,
                 tabBarStyle: {
-                    backgroundColor: isDark ? '#101622' : '#f6f6f8',
-                    borderTopColor: isDark ? '#1f2937' : '#e2e8f0',
-                    height: 60 + androidBottomPadding, // Increase total height
-                    paddingBottom: itemsPaddingBottom + (androidBottomPadding / 2), // Lift items up
-                    paddingTop: 8,
+                    backgroundColor: 'rgba(15, 23, 42, 0.90)',
+                    borderTopWidth: 1,
+                    borderTopColor: 'rgba(255, 255, 255, 0.05)',
+                    height: 70 + androidBottomPadding,
+                    paddingBottom: itemsPaddingBottom + (androidBottomPadding / 2),
+                    paddingTop: 12,
+                    position: 'absolute',
+                    elevation: 0,
                 },
                 tabBarActiveTintColor: '#dc2626',
                 tabBarInactiveTintColor: isDark ? '#94a3b8' : '#64748b',
@@ -70,8 +73,8 @@ const TabNavigator = () => {
                 component={PanicButtonScreen}
                 options={{
                     tabBarIcon: ({ focused }) => (
-                        <View className="items-center justify-center -mt-8 bg-red-600 border-4 border-slate-900 rounded-full w-14 h-14 shadow-lg top-1">
-                            <Text className="text-xs font-bold text-white">SOS</Text>
+                        <View className="items-center justify-center -mt-6 bg-red-600 border-[6px] border-slate-900/60 rounded-full w-16 h-16 shadow-2xl shadow-red-600/50 backdrop-blur-md">
+                            <Text className="text-xs font-black text-white tracking-widest uppercase">SOS</Text>
                         </View>
                     ),
                     tabBarLabel: () => null // Hide label for the big button

@@ -65,19 +65,10 @@ const SafetyMapScreen = () => {
             <StatusBar style="light" />
             <View className="flex-1 w-full h-full flex-col overflow-hidden">
 
-                {/* Header */}
-                <View className="flex-row items-center justify-between px-4 py-3 bg-surface-dark shadow-md z-20">
-                    <TouchableOpacity className="flex items-start justify-center w-12 h-12">
-                        <MaterialIcons name="menu" size={24} color="#FFFFFF" />
-                    </TouchableOpacity>
-                    <Text className="flex-1 text-lg font-bold text-center text-white">
-                        {mapMode === 'route' ? 'Navegação Segura' : 'Mapa de Segurança'}
-                    </Text>
-                    <View className="w-12 items-end justify-center">
-                        <TouchableOpacity>
-                            <MaterialIcons name="settings" size={24} color="#FFFFFF" />
-                        </TouchableOpacity>
-                    </View>
+                {/* Premium Header - Glassmorphic */}
+                <View className="absolute top-10 w-[70%] self-center h-14 z-20 pointer-events-none flex-row items-center justify-center bg-slate-900/60 border border-white/10 rounded-full shadow-2xl">
+                    <MaterialIcons name="security" size={20} color="#3b82f6" style={{ marginRight: 8 }} />
+                    <Text className="text-white text-[14px] font-black tracking-widest uppercase">Radar Ativo</Text>
                 </View>
 
                 {/* Main Map Content */}

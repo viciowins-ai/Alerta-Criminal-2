@@ -100,61 +100,80 @@ const PanicButtonScreen = ({ navigation }) => {
     });
 
     return (
-        <SafeAreaView className="flex-1 bg-background-dark items-center justify-center relative">
+        <SafeAreaView className="flex-1 bg-[#05070f] relative overflow-hidden items-center justify-center">
             <StatusBar style="light" />
 
-            {/* Header Title (Centered) */}
-            <View className="absolute top-10 w-full items-center">
-                <Text className="text-white font-bold text-xl">SOS Premium</Text>
+            {/* Glowing Emergency Abyssal Background */}
+            <View className="absolute top-1/2 left-1/2 -ml-[250px] -mt-[250px] w-[500px] h-[500px] bg-red-600/10 rounded-full blur-[100px] -z-10 animate-pulse" />
+
+            {/* Premium Glassmorphic Header */}
+            <View className="absolute top-12 left-6 right-6 h-16 z-20 pointer-events-none flex-row items-center justify-between bg-slate-900/50 backdrop-blur-3xl border border-white/10 rounded-full shadow-[0_0_20px_rgba(0,0,0,0.5)] px-4">
+                <TouchableOpacity
+                    onPress={() => navigation.goBack()}
+                    className="w-10 h-10 bg-white/5 rounded-full items-center justify-center border border-white/10 backdrop-blur-md pointer-events-auto active:bg-white/10"
+                >
+                    <MaterialIcons name="arrow-back" size={20} color="white" />
+                </TouchableOpacity>
+                <View className="items-center">
+                    <Text className="text-white font-black text-[15px] tracking-widest uppercase">Central de Pânico</Text>
+                    <View className="flex-row items-center mt-1">
+                        <View className="w-1.5 h-1.5 rounded-full bg-red-500 mr-1.5 animate-pulse" />
+                        <Text className="text-red-400 text-[9px] font-black tracking-[0.3em] uppercase">Emergência</Text>
+                    </View>
+                </View>
+                <View className="w-10" />
             </View>
 
-            {/* Back Button */}
-            <TouchableOpacity
-                onPress={() => navigation.goBack()}
-                className="absolute top-10 left-5 p-2"
-            >
-                <MaterialIcons name="arrow-back" size={24} color="white" />
-            </TouchableOpacity>
-
-            {/* Main SOS Button Container */}
-            <View className="items-center justify-center">
-                {/* Visual Rings */}
-                <View className="w-[320px] h-[320px] rounded-full bg-red-900/20 absolute items-center justify-center border border-red-900/30">
-                    {/* Ring fills based on progress would be complex with just Views, using simpler opacity logic for now */}
+            {/* SOS Trigger Area */}
+            <View className="items-center justify-center mt-10">
+                {/* Visual Glass Rings */}
+                <View className="w-[340px] h-[340px] rounded-full absolute items-center justify-center border border-red-500/10 bg-red-900/5 backdrop-blur-sm">
+                    {/* Progress Indicator Ring */}
                     <View
-                        className="absolute inset-0 rounded-full bg-red-600/30"
-                        style={{ opacity: progress }} // Fades in as you hold
+                        className="absolute inset-0 rounded-full bg-red-600/20"
+                        style={{ transform: [{ scale: progress > 0 ? 1 : 0.8 }], opacity: progress }}
                     />
                 </View>
 
-                <View className="w-[260px] h-[260px] rounded-full bg-red-800/30 absolute items-center justify-center transform scale-95" />
+                <View className="w-[280px] h-[280px] rounded-full absolute items-center justify-center border border-red-500/20 bg-red-900/10 backdrop-blur-md" />
 
-                {/* The Button */}
+                {/* The Core Button */}
                 <TouchableOpacity
                     onPressIn={handlePressIn}
                     onPressOut={handlePressOut}
                     activeOpacity={1}
                     style={Platform.OS === 'web' ? { userSelect: 'none', cursor: 'pointer' } : {}}
+                    className="z-10"
                 >
                     <Animated.View
                         style={[animatedButtonStyle]}
-                        className={`w-[200px] h-[200px] rounded-full items-center justify-center shadow-2xl shadow-red-600/50 border-4 ${progress > 0 ? 'border-white' : 'border-red-500'} bg-red-600`}
+                        className={`w-[220px] h-[220px] rounded-full items-center justify-center shadow-[0_0_80px_rgba(220,38,38,0.5)] border-4 ${isPressing ? 'border-white bg-red-500' : 'border-red-500/50 bg-[#dc2626]'} transition-colors duration-300 relative overflow-hidden`}
                     >
-                        <Text className="text-white font-black text-6xl tracking-widest">SOS</Text>
-                        {isPressing && (
-                            <Text className="text-white font-bold text-sm absolute bottom-10">SEGURE</Text>
-                        )}
+                        {/* Dynamic Filling background based on hold time */}
+                        <View
+                            className="absolute bottom-0 left-0 right-0 bg-white/30"
+                            style={{ height: `${progress * 100}%` }}
+                        />
+
+                        <MaterialIcons name="crisis-alert" size={40} color={isPressing ? "white" : "rgba(255,255,255,0.8)"} className="mb-2" />
+                        <Text className={`font-black text-6xl tracking-[0.1em] text-center ${isPressing ? 'text-white' : 'text-white'}`} style={{ textShadowColor: 'rgba(0, 0, 0, 0.4)', textShadowOffset: { width: 0, height: 4 }, textShadowRadius: 10 }}>
+                            SOS
+                        </Text>
+
+                        <Text className="text-white/80 font-black text-[10px] tracking-widest uppercase mt-3">
+                            {isPressing ? 'Mantendo...' : 'Pressione'}
+                        </Text>
                     </Animated.View>
                 </TouchableOpacity>
             </View>
 
-            {/* Instruction Text */}
-            <View className="absolute bottom-20 px-10">
-                <Text className="text-slate-400 text-center leading-6 text-base">
-                    Pressione e segure por <Text className="font-bold text-white">3 segundos</Text> para enviar um alerta de emergência imediato.
+            {/* Instruction Footer Glass Panel */}
+            <View className="absolute bottom-12 left-8 right-8 bg-slate-900/60 p-5 rounded-3xl border border-white/5 backdrop-blur-xl items-center">
+                <View className="w-12 h-1 bg-white/10 rounded-full mb-4" />
+                <Text className="text-slate-400 text-center text-sm font-medium leading-6">
+                    Mantenha pressionado por <Text className="font-black text-white">3 segundos</Text> para enviar sua localização exata para contatos de emergência e autoridades conectadas.
                 </Text>
             </View>
-
         </SafeAreaView>
     );
 };

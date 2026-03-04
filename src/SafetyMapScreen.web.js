@@ -105,18 +105,11 @@ const SafetyMapScreen = ({ navigation }) => {
         <SafeAreaView className="flex-1 bg-slate-900 w-full h-full">
             <StatusBar style="light" />
 
-            {/* Header Title */}
-            <View className="absolute top-0 left-0 right-0 h-24 pt-8 items-center justify-start z-20 pointer-events-none bg-gradient-to-b from-black/80 to-transparent">
-                <Text className="text-white text-lg font-bold shadow-md">Mapa de Segurança (Premium)</Text>
+            {/* Premium Header - Glassmorphic */}
+            <View className="absolute top-10 w-3/4 self-center h-14 z-20 pointer-events-none flex-row items-center justify-center bg-slate-900/60 backdrop-blur-2xl border border-white/10 rounded-full shadow-2xl">
+                <MaterialIcons name="security" size={20} color="#3b82f6" style={{ marginRight: 8 }} />
+                <Text className="text-white text-[14px] font-black tracking-widest uppercase">Radar Ativo</Text>
             </View>
-
-            {/* Back Button */}
-            <TouchableOpacity
-                onPress={() => navigation.goBack()}
-                className="absolute top-8 left-4 z-30 w-10 h-10 items-center justify-center rounded-full bg-slate-900/50 backdrop-blur-md active:bg-slate-800 border border-slate-700 pointer-events-auto"
-            >
-                <MaterialIcons name="arrow-back" size={24} color="white" />
-            </TouchableOpacity>
 
             {/* Container do Mapa (HTML Div explícita para garantir renderização) */}
             <View className="relative flex-1 bg-slate-900 overflow-hidden z-0">
@@ -184,31 +177,34 @@ const SafetyMapScreen = ({ navigation }) => {
                         style={{ position: 'absolute', bottom: 100, left: 16, right: 16, zIndex: 9999 }}
                         pointerEvents="box-none"
                     >
-                        <View className="bg-slate-900/95 border border-slate-700 rounded-3xl p-5 shadow-2xl backdrop-blur-xl pointer-events-auto">
-                            <View className="flex-row justify-between items-start mb-4">
+                        <View className="bg-slate-900/60 border border-white/10 rounded-[32px] p-6 shadow-2xl backdrop-blur-3xl pointer-events-auto">
+                            <View className="flex-row justify-between items-start mb-6">
                                 <View>
-                                    <Text className="text-white font-bold text-xl">Resumo da Área</Text>
-                                    <Text className="text-emerald-400 text-xs font-bold uppercase tracking-wider">Monitoramento Ativo</Text>
+                                    <Text className="text-white font-extrabold text-[22px] tracking-tight">Análise da Área</Text>
+                                    <View className="flex-row items-center mt-1">
+                                        <View className="w-2 h-2 rounded-full bg-emerald-500 shadow-lg shadow-emerald-500/50 mr-2 animate-pulse" />
+                                        <Text className="text-emerald-400 text-[10px] font-bold uppercase tracking-[0.2em]">Monitoramento Ativo</Text>
+                                    </View>
                                 </View>
                                 <TouchableOpacity
                                     onPress={() => setShowSummary(false)}
-                                    className="bg-slate-800 p-1 rounded-full border border-slate-700 hover:bg-slate-700"
+                                    className="bg-white/10 w-8 h-8 rounded-full items-center justify-center hover:bg-white/20 transition-all border border-white/10"
                                 >
-                                    <MaterialIcons name="keyboard-arrow-down" size={24} color="#94a3b8" />
+                                    <MaterialIcons name="keyboard-arrow-down" size={20} color="#cbd5e1" />
                                 </TouchableOpacity>
                             </View>
 
-                            <View className="flex-row gap-4 mt-2">
-                                <View className="items-center flex-1 bg-slate-800/50 p-2 rounded-xl border border-slate-700">
-                                    <Text className="text-white font-black text-xl">{incidents.length}</Text>
-                                    <Text className="text-slate-400 text-[10px] uppercase">Incidentes</Text>
+                            <View className="flex-row gap-4">
+                                <View className="items-center flex-1 bg-black/40 p-4 rounded-2xl border border-white/5 shadow-inner">
+                                    <Text className="text-white font-black text-3xl">{incidents.length}</Text>
+                                    <Text className="text-slate-400 text-[10px] uppercase font-bold tracking-widest mt-1">Incidentes</Text>
                                 </View>
                                 <TouchableOpacity
                                     onPress={handleMyLocation}
-                                    className="items-center justify-center flex-1 bg-blue-600 p-2 rounded-xl shadow-lg active:bg-blue-700 border border-blue-500"
+                                    className="items-center justify-center flex-1 bg-blue-600/90 p-4 rounded-2xl shadow-xl shadow-blue-600/30 active:bg-blue-700 border border-blue-400/50"
                                 >
-                                    <MaterialIcons name="my-location" size={24} color="white" />
-                                    <Text className="text-white font-bold text-[10px] uppercase mt-1">Localizar</Text>
+                                    <MaterialIcons name="my-location" size={28} color="white" />
+                                    <Text className="text-white font-bold text-[10px] uppercase mt-2 tracking-widest">Localizar</Text>
                                 </TouchableOpacity>
                             </View>
                         </View>
