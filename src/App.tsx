@@ -1,12 +1,13 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import Map, { Marker, NavigationControl, MapRef, Layer } from 'react-map-gl/mapbox';
 import 'mapbox-gl/dist/mapbox-gl.css';
-import { ArrowLeft, ChevronDown, Crosshair, Info, Map as MapIcon, Globe, Moon } from 'lucide-react';
+import { ArrowLeft, ChevronDown, Crosshair, Info, Map as MapIcon, Globe, Moon, AlertTriangle, X } from 'lucide-react';
 
 const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_TOKEN;
 
 function App() {
   const [showSummary, setShowSummary] = useState(true);
+  const [isReporting, setIsReporting] = useState(false);
   const [userLocation, setUserLocation] = useState<[number, number] | null>(null);
   const [mapStyle, setMapStyle] = useState<'dark' | 'street' | 'satellite'>('dark');
   const mapRef = useRef<MapRef>(null);
@@ -108,7 +109,7 @@ function App() {
           logoPosition="bottom-left"
         >
           {/* Controles de Rotação (Aparecem em Telas Grandes, em Celular se Roda com Dedo) */}
-          <NavigationControl position="bottom-right" style={{ marginBottom: showSummary ? 240 : 160, marginRight: 20 }} showCompass={true} showZoom={true} />
+          <NavigationControl position="top-right" style={{ marginTop: 90, marginRight: 20 }} showCompass={true} showZoom={true} />
 
           {/* User Location Marker Customizado (Radar Azul) */}
           {userLocation && (
@@ -143,7 +144,7 @@ function App() {
 
       {/* Bottom Summary UI */}
       {showSummary ? (
-        <div className="absolute bottom-6 left-4 right-4 z-40 pointer-events-none">
+        <div className="absolute bottom-[90px] left-4 right-4 z-40 pointer-events-none">
           <div className="bg-slate-900/95 border border-slate-700 rounded-3xl p-5 shadow-2xl backdrop-blur-xl pointer-events-auto mx-auto max-w-md">
             <div className="flex justify-between items-start mb-4">
               <div>
@@ -171,11 +172,26 @@ function App() {
                 <span className="text-white font-bold text-[10px] uppercase text-center leading-tight">Voo 3D<br />(Localizar)</span>
               </button>
             </div>
+
+            {/* Red Alert Button - Main Panel */}
+            <button
+              onClick={() => setIsReporting(true)}
+              className="mt-4 w-full flex items-center justify-center gap-2 bg-red-600 p-4 rounded-xl shadow-[0_0_20px_rgba(220,38,38,0.5)] hover:bg-red-500 border border-red-400 focus:outline-none transition-all active:scale-95"
+            >
+              <AlertTriangle size={20} className="text-white" />
+              <span className="text-white font-bold uppercase tracking-wide">Reportar Incidente</span>
+            </button>
           </div>
         </div>
       ) : (
         /* Floating Action Buttons when summary is collapsed */
-        <div className="absolute bottom-8 right-6 z-40 flex flex-col gap-3">
+        <div className="absolute bottom-[100px] right-6 z-40 flex flex-col gap-3">
+          <button
+            onClick={() => setIsReporting(true)}
+            className="w-12 h-12 bg-red-600 rounded-full flex items-center justify-center shadow-[0_0_15px_rgba(220,38,38,0.5)] border border-red-400 hover:bg-red-500 transition-all active:scale-95 focus:outline-none"
+          >
+            <AlertTriangle size={22} className="text-white" />
+          </button>
           <button
             onClick={handleMyLocation}
             className="w-12 h-12 bg-blue-600 rounded-full flex items-center justify-center shadow-[0_0_15px_rgba(37,99,235,0.4)] border border-blue-400 hover:bg-blue-500 transition-all active:scale-95 focus:outline-none"
@@ -188,6 +204,60 @@ function App() {
           >
             <Info size={22} className="text-blue-400" />
           </button>
+        </div>
+      )}
+
+      {/* Report Incident Modal Slide Up */}
+      {isReporting && (
+        <div className="absolute inset-0 z-50 flex items-end sm:items-center justify-center bg-black/70 backdrop-blur-sm p-4 animate-in fade-in duration-200 pointer-events-auto">
+          <div className="w-full max-w-md bg-slate-900 border border-slate-700 rounded-3xl p-6 shadow-2xl animate-in slide-in-from-bottom-10 sm:slide-in-from-bottom-0 sm:zoom-in-95 duration-300">
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-white font-bold text-2xl flex items-center gap-2">
+                <AlertTriangle className="text-red-500 fill-red-500/20" size={28} />
+                Novo Alerta
+              </h2>
+              <button
+                onClick={() => setIsReporting(false)}
+                className="p-2 rounded-full bg-slate-800 text-slate-400 hover:text-white hover:bg-slate-700 transition-colors focus:outline-none"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <p className="text-slate-300 text-sm mb-5 leading-relaxed">
+              Posicione no mapa de fundo o local exato. Selecione a categoria abaixo para alertar os outros usuários instantaneamente:
+            </p>
+
+            <div className="grid grid-cols-2 gap-3 mb-6">
+              <button className="flex flex-col items-center justify-center p-4 rounded-xl bg-slate-800 border border-slate-700 hover:border-red-500 hover:bg-slate-800/80 transition-all focus:outline-none focus:ring-2 focus:ring-red-500/50">
+                <span className="text-3xl mb-2 drop-shadow-md">🔫</span>
+                <span className="text-white font-semibold text-xs text-center uppercase tracking-wide">Assalto<br /><span className="text-slate-400 text-[10px] capitalize">(Armado)</span></span>
+              </button>
+              <button className="flex flex-col items-center justify-center p-4 rounded-xl bg-slate-800 border border-slate-700 hover:border-orange-500 hover:bg-slate-800/80 transition-all focus:outline-none focus:ring-2 focus:ring-orange-500/50">
+                <span className="text-3xl mb-2 drop-shadow-md">🏃</span>
+                <span className="text-white font-semibold text-xs text-center uppercase tracking-wide">Furto<br /><span className="text-slate-400 text-[10px] capitalize">(Sem Arma)</span></span>
+              </button>
+              <button className="flex flex-col items-center justify-center p-4 rounded-xl bg-slate-800 border border-slate-700 hover:border-yellow-500 hover:bg-slate-800/80 transition-all focus:outline-none focus:ring-2 focus:ring-yellow-500/50">
+                <span className="text-3xl mb-2 drop-shadow-md">👀</span>
+                <span className="text-white font-semibold text-xs text-center uppercase tracking-wide">Atividade<br /><span className="text-slate-400 text-[10px] capitalize">Suspeita</span></span>
+              </button>
+              <button className="flex flex-col items-center justify-center p-4 rounded-xl bg-slate-800 border border-slate-700 hover:border-blue-500 hover:bg-slate-800/80 transition-all focus:outline-none focus:ring-2 focus:ring-blue-500/50">
+                <span className="text-3xl mb-2 drop-shadow-md">🚗</span>
+                <span className="text-white font-semibold text-xs text-center uppercase tracking-wide">Veículo<br /><span className="text-slate-400 text-[10px] capitalize">Roubado</span></span>
+              </button>
+            </div>
+
+            <button
+              className="w-full bg-red-600 text-white font-bold uppercase tracking-wider p-4 rounded-xl shadow-[0_0_15px_rgba(220,38,38,0.4)] hover:bg-red-500 transition-all mb-3 focus:outline-none"
+              onClick={() => {
+                alert("Supabase vai salvar agora esse tipo no mapa!");
+                setIsReporting(false);
+              }}
+            >
+              Publicar Alerta
+            </button>
+            <p className="text-center text-[10px] text-slate-500 font-semibold uppercase tracking-wider">Use com responsabilidade. Falsos alertas são crime.</p>
+          </div>
         </div>
       )}
     </div>
