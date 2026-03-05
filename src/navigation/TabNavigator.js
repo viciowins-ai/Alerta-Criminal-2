@@ -14,7 +14,6 @@ import UserProfileScreen from "../UserProfileScreen";
 const Tab = createBottomTabNavigator();
 
 const TabNavigator = () => {
-  const { colorScheme } = useColorScheme();
   const isDark = true; // Force Dark Mode for Premium App aesthetic
 
   // Extra padding for Android devices with soft nav bars
