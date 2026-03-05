@@ -55,8 +55,8 @@ function App() {
   return (
     <div className="flex flex-col h-screen w-full bg-slate-900 text-white overflow-hidden relative font-sans">
       {/* Header Title */}
-      <div className="absolute top-0 left-0 right-0 h-24 pt-8 flex items-start justify-center z-20 pointer-events-none bg-gradient-to-b from-black/80 to-transparent">
-        <h1 className="text-white text-lg font-bold drop-shadow-md">Mapa de Segurança (Premium)</h1>
+      <div className="absolute top-0 left-0 right-0 h-24 pt-8 flex items-start justify-center px-20 z-20 pointer-events-none bg-gradient-to-b from-black/80 to-transparent">
+        <h1 className="text-white text-lg sm:text-lg font-bold drop-shadow-md truncate text-center">Mapa de Segurança</h1>
       </div>
 
       {/* Back Button */}
