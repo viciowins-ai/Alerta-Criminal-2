@@ -5,11 +5,24 @@ import { Platform, View, StyleSheet } from 'react-native';
 import MainNavigator from './src/navigation/MainNavigator';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { useFonts } from 'expo-font';
+import { MaterialIcons, FontAwesome5, Feather, Ionicons } from '@expo/vector-icons';
 
 import { AuthProvider } from './src/context/AuthContext';
 
 export default function App() {
   const isWeb = Platform.OS === 'web';
+
+  const [fontsLoaded] = useFonts({
+    ...MaterialIcons.font,
+    ...FontAwesome5.font,
+    ...Feather.font,
+    ...Ionicons.font,
+  });
+
+  if (!fontsLoaded) {
+    return null;
+  }
 
   const AppContent = (
     <AuthProvider>
