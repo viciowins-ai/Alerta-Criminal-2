@@ -2,14 +2,21 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import Map, { Marker, NavigationControl, MapRef, Layer } from 'react-map-gl/mapbox';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import { ChevronDown, Crosshair, Info, Map as MapIcon, Globe, Moon, AlertTriangle, X } from 'lucide-react';
+import { createClient } from '@supabase/supabase-js';
 
 const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_TOKEN;
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
+const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
+
+// Initialize Supabase Client
+const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 function App() {
   const [showSummary, setShowSummary] = useState(true);
   const [isReporting, setIsReporting] = useState(false);
   const [userLocation, setUserLocation] = useState<[number, number] | null>(null);
   const [mapStyle, setMapStyle] = useState<'dark' | 'street' | 'satellite'>('dark');
+  const [incidents, setIncidents] = useState<any[]>([]);
   const mapRef = useRef<MapRef>(null);
 
   const getMapboxStyle = () => {
@@ -51,6 +58,38 @@ function App() {
   useEffect(() => {
     handleMyLocation();
   }, [handleMyLocation]);
+
+  useEffect(() => {
+    // 1. Fetch initial incidents
+    const fetchIncidents = async () => {
+      const { data, error } = await supabase
+        .from('incidents')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('Error fetching incidents:', error);
+      } else if (data) {
+        setIncidents(data);
+      }
+    };
+    fetchIncidents();
+
+    // 2. Subscribe to realtime inserts
+    const channels = supabase.channel('custom-insert-channel')
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'incidents' },
+        (payload) => {
+          setIncidents((current) => [payload.new, ...current]);
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channels);
+    };
+  }, []);
 
   return (
     <div className="flex flex-col h-screen w-full bg-slate-900 text-white overflow-hidden relative font-sans">
@@ -122,6 +161,51 @@ function App() {
             </Marker>
           )}
 
+          {/* Renderização Real dos Incidentes Salvos no Supabase */}
+          {incidents.map((incident) => {
+            let icon = '⚠️';
+            let color = 'bg-yellow-500';
+            let shadow = 'shadow-yellow-500/50';
+
+            switch (incident.type) {
+              case 'roubo':
+                icon = '🔫';
+                color = 'bg-red-600';
+                shadow = 'shadow-red-600/50';
+                break;
+              case 'vandalism':
+                icon = '🚗';
+                color = 'bg-purple-600';
+                shadow = 'shadow-purple-600/50';
+                break;
+              case 'suspect':
+                icon = '👀';
+                color = 'bg-amber-500';
+                shadow = 'shadow-amber-500/50';
+                break;
+              case 'other':
+                icon = '⚠️';
+                color = 'bg-blue-600';
+                shadow = 'shadow-blue-600/50';
+                break;
+            }
+
+            return (
+              <Marker
+                key={incident.id}
+                longitude={incident.longitude}
+                latitude={incident.latitude}
+                anchor="bottom"
+              >
+                <div className={`relative flex items-center justify-center w-10 h-10 ${color} rounded-full shadow-lg ${shadow} border-2 border-white/20 cursor-pointer hover:scale-110 transition-transform`}>
+                  <span className="text-xl drop-shadow-md">{icon}</span>
+                  {/* Triangle for pin effect */}
+                  <div className={`absolute -bottom-2 w-0 h-0 border-l-8 border-r-8 border-t-8 border-transparent border-t-${color.replace('bg-', '')}`} />
+                </div>
+              </Marker>
+            );
+          })}
+
           {/* Renderização Real de Prédios em 3D */}
           {mapStyle !== 'satellite' && (
             <Layer
@@ -161,7 +245,7 @@ function App() {
 
             <div className="flex gap-4 mt-2">
               <div className="flex flex-col items-center justify-center flex-1 bg-slate-800/50 p-3 rounded-xl border border-slate-700">
-                <span className="text-white font-black text-2xl leading-none">0</span>
+                <span className="text-white font-black text-2xl leading-none">{incidents.length}</span>
                 <span className="text-slate-400 text-[10px] uppercase font-semibold mt-1">Incidentes</span>
               </div>
               <button
@@ -250,7 +334,7 @@ function App() {
             <button
               className="w-full bg-red-600 text-white font-bold uppercase tracking-wider p-4 rounded-xl shadow-[0_0_15px_rgba(220,38,38,0.4)] hover:bg-red-500 transition-all mb-3 focus:outline-none"
               onClick={() => {
-                alert("Supabase vai salvar agora esse tipo no mapa!");
+                alert("Nota: Utilize o aplicativo mobile para reportar novos alertas nativamente com precisão GPS.");
                 setIsReporting(false);
               }}
             >
