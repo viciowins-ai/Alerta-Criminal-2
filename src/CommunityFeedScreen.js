@@ -2,18 +2,18 @@ import React, { useEffect, useState, useCallback } from "react";
 import {
   View,
   Text,
-  Image,
   TouchableOpacity,
   ScrollView,
   RefreshControl,
   ActivityIndicator,
   FlatList,
+  Platform,
 } from "react-native";
 import {
   MaterialIcons,
   FontAwesome5,
-  Ionicons,
   Feather,
+  Ionicons,
 } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { StatusBar } from "expo-status-bar";
@@ -26,6 +26,7 @@ const CommunityFeedScreen = ({ navigation }) => {
   const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [activeTab, setActiveTab] = useState("Todos");
 
   // Map of likesByUser: { incidentId: true/false }
   const [likedPosts, setLikedPosts] = useState({});
@@ -37,15 +38,14 @@ const CommunityFeedScreen = ({ navigation }) => {
         .from("incidents")
         .select(
           `
-                    *,
-                    profiles (full_name, guardian_level),
-                    likes (count),
-                    comments (count)
-                `,
+            *,
+            profiles (full_name, guardian_level),
+            likes (count),
+            comments (count)
+          `
         )
         .order("created_at", { ascending: false });
 
-      // Also check which ones current user liked
       if (user) {
         const { data: userLikes } = await supabase
           .from("likes")
@@ -58,7 +58,7 @@ const CommunityFeedScreen = ({ navigation }) => {
       }
 
       if (error) {
-        console.error("Error fetching pinst:", error);
+        console.error("Error fetching posts:", error);
       } else {
         setPosts(data || []);
       }
@@ -70,11 +70,10 @@ const CommunityFeedScreen = ({ navigation }) => {
     }
   };
 
-  // Reload when screen comes into focus or on mount
   useFocusEffect(
     useCallback(() => {
       fetchPosts();
-    }, []),
+    }, [])
   );
 
   const onRefresh = useCallback(() => {
@@ -86,9 +85,7 @@ const CommunityFeedScreen = ({ navigation }) => {
     if (!user) return;
 
     const isLiked = likedPosts[incidentId];
-
-    // Optimistic update
-    setLikedPosts((prev) => ({ ...prev, [incidentId]: !isLiked }));
+    setLikedPosts((prev) => ({ ...prev, [incidentId]: !isLiked })); // Optimistic
 
     if (isLiked) {
       await supabase
@@ -100,242 +97,224 @@ const CommunityFeedScreen = ({ navigation }) => {
         .from("likes")
         .insert({ user_id: user.id, incident_id: incidentId });
     }
-    fetchPosts(); // Refresh counts
-  };
-
-  const getIconForType = (type) => {
-    switch (type) {
-      case "roubo":
-        return "running";
-      case "suspect":
-        return "eye";
-      case "vandalism":
-        return "trash";
-      default:
-        return "exclamation-circle";
-    }
+    fetchPosts();
   };
 
   const formatTime = (dateString) => {
     if (!dateString) return "";
     const date = new Date(dateString);
-    return (
-      date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) +
-      " - " +
-      date.toLocaleDateString()
-    );
+    const now = new Date();
+    const diffInHours = Math.abs(now - date) / 36e5;
+
+    if (diffInHours < 24) {
+      return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+    }
+    return date.toLocaleDateString();
+  };
+
+  const getIncidentTitle = (type) => {
+    switch (type) {
+      case "roubo": return "Assalto na região";
+      case "suspect": return "Atividade suspeita";
+      case "vandalism": return "Acidente / Vandalismo";
+      default: return "Alerta Vizinhança";
+    }
   };
 
   const renderPost = ({ item }) => (
-    <View className="bg-[#1f2235] px-4 pt-5 pb-3">
+    <View className="bg-[#1f2235] px-5 pt-6 pb-4 border-b border-[#2C304A]">
       <TouchableOpacity
-        activeOpacity={0.9}
+        activeOpacity={0.8}
         onPress={() => navigation.navigate("PostDetails", { postId: item.id })}
         className="flex-1"
       >
-        {/* Header do Post: Avatar, Nome, Tempo e Menu */}
+        {/* Header - User Info */}
         <View className="flex-row items-center justify-between mb-3">
           <View className="flex-row items-center gap-3">
-            <View className="w-10 h-10 rounded-full bg-orange-200 items-center justify-center overflow-hidden border border-white/10 shadow-sm">
-              {/* Usa iniciais se não tiver imagem para simular o layout */}
-              <Text className="text-orange-900 font-bold text-sm">
-                {item.profiles?.full_name
-                  ? item.profiles.full_name.charAt(0).toUpperCase()
-                  : "U"}
+            <View className="w-11 h-11 rounded-full bg-indigo-500 items-center justify-center border-2 border-[#1f2235] shadow-lg shadow-indigo-500/30">
+              <Text className="text-white font-extrabold text-[15px]">
+                {item.profiles?.full_name ? item.profiles.full_name.charAt(0).toUpperCase() : "U"}
               </Text>
             </View>
             <View>
-              <Text className="text-white font-bold text-[14px] leading-4 mb-0.5">
-                {item.profiles?.full_name || "Usuário Anônimo"}
-              </Text>
-              <Text className="text-slate-400 text-[11px] font-medium leading-3">
+              <View className="flex-row items-center gap-1.5">
+                <Text className="text-white font-bold text-[15px] tracking-tight">
+                  {item.profiles?.full_name || "Usuário Anônimo"}
+                </Text>
+                {/* Verified/Guardian Badge Example */}
+                {item.profiles?.guardian_level > 0 && (
+                  <MaterialIcons name="verified" size={14} color="#fbbf24" />
+                )}
+              </View>
+              <Text className="text-slate-400 text-[12px] font-medium mt-0.5">
                 {formatTime(item.created_at)}
               </Text>
             </View>
           </View>
-          <TouchableOpacity className="p-2 -mr-2">
-            <MaterialIcons name="more-horiz" size={20} color="#64748b" />
+          <TouchableOpacity className="p-2 -mr-3 rounded-full hover:bg-white/5 transition-colors">
+            <MaterialIcons name="more-horiz" size={22} color="#64748b" />
           </TouchableOpacity>
         </View>
 
-        {/* Título do Incidente (Mapeado do Tipo) */}
-        <Text className="text-white font-bold text-[15px] mb-2 leading-tight">
-          {item.type === "roubo"
-            ? "Assalto na região"
-            : item.type === "suspect"
-              ? "Atividade suspeita"
-              : item.type === "vandalism"
-                ? "Acidente/Vandalismo na via"
-                : "Reporte importante na vizinhança"}
-        </Text>
-
-        {/* Descrição Principal */}
-        <Text
-          className="text-slate-300 text-[13px] leading-5 mb-4"
-          numberOfLines={4}
-        >
-          {item.description ||
-            "Ocorrência sem descrição detalhada. Fique alerta nas redondezas e acesse o mapa para ver o local exato."}
-        </Text>
-
-        {/* Área de Mídia Simples (Exemplo Estático para imitar layout se houvesse imagem) */}
-        {/* No futuro: if (item.image_url) renderImage... */}
+        {/* Content Box */}
+        <View className="bg-[#262A42] rounded-2xl p-4 mb-4 border border-[#303554] shadow-sm">
+          <Text className="text-[#fbbf24] font-black text-[13px] uppercase tracking-wider mb-2">
+            {getIncidentTitle(item.type)}
+          </Text>
+          <Text className="text-slate-200 text-[14px] leading-[22px]" numberOfLines={4}>
+            {item.description || "Ocorrência sem descrição detalhada. Acesse para ver detalhes e localização exata no mapa."}
+          </Text>
+        </View>
       </TouchableOpacity>
 
-      {/* Rodapé: Alertas (Curtidas) e Comentários (Botão Amarelo) */}
-      <View className="flex-row items-center justify-between mt-1">
-        {/* Contador de Engajamento */}
-        <View className="flex-row items-center gap-4">
+      {/* Footer Actions */}
+      <View className="flex-row items-center justify-between">
+        <View className="flex-row items-center gap-6">
           <TouchableOpacity
             onPress={() => toggleLike(item.id)}
-            className="flex-row items-center gap-1.5 p-1"
+            className="flex-row items-center gap-2 px-2 py-1"
           >
             <FontAwesome5
-              name="exclamation"
-              size={14}
-              color={likedPosts[item.id] ? "#fbbf24" : "#fbbf24"} // Amarelo constante imitando o layout
+              name="exclamation-triangle"
+              size={15}
+              color={likedPosts[item.id] ? "#fbbf24" : "#64748b"}
             />
-            <Text className="text-slate-400 font-bold text-[12px]">
+            <Text className={`font-bold text-[13px] ${likedPosts[item.id] ? 'text-[#fbbf24]' : 'text-slate-400'}`}>
               {item.likes?.[0]?.count || 0}
             </Text>
           </TouchableOpacity>
 
           <TouchableOpacity
-            onPress={() =>
-              navigation.navigate("PostDetails", { postId: item.id })
-            }
-            className="flex-row items-center gap-1.5 p-1"
+            onPress={() => navigation.navigate("PostDetails", { postId: item.id })}
+            className="flex-row items-center gap-2 px-2 py-1"
           >
-            <Feather name="message-square" size={14} color="#94a3b8" />
-            <Text className="text-slate-400 font-bold text-[12px]">
+            <Feather name="message-circle" size={16} color="#64748b" />
+            <Text className="text-slate-400 font-bold text-[13px]">
               {item.comments?.[0]?.count || 0}
             </Text>
           </TouchableOpacity>
         </View>
 
-        {/* Botão de Comentar (Amarelo Cápsula) */}
         <TouchableOpacity
-          onPress={() =>
-            navigation.navigate("PostDetails", { postId: item.id })
-          }
-          className="bg-[#fbbf24] px-5 py-1.5 rounded-full active:bg-[#f59e0b] shadow-[0_2px_10px_rgba(251,191,36,0.2)]"
+          onPress={() => navigation.navigate("PostDetails", { postId: item.id })}
+          className="bg-[#fbbf24] px-5 py-2 rounded-full active:bg-[#f59e0b] shadow-[0_4px_14px_rgba(251,191,36,0.25)]"
         >
-          <Text className="text-[#1f2235] font-black text-[12px] uppercase">
-            Comentar
+          <Text className="text-[#1f2235] font-black text-[12px] uppercase tracking-widest">
+            Avaliar
           </Text>
         </TouchableOpacity>
       </View>
-
-      {/* Linha Divisória Escura Simples entre posts */}
-      <View className="h-[1px] bg-white/5 mt-4 -mx-4" />
     </View>
   );
 
   return (
-    <SafeAreaView className="flex-1 bg-[#1f2235]">
-      <StatusBar style="light" />
+    <SafeAreaView className="flex-1 bg-[#1f2235]" edges={["top", "left", "right"]}>
+      <StatusBar style="light" backgroundColor="#1f2235" />
 
-      {/* Top Bar (Cápsula Translúcida do Layout) */}
-      <View className="bg-[#1f2235] px-4 pt-4 pb-4">
-        <View className="flex-row items-center justify-between border-b border-white/5 pb-4">
-          <View className="w-10 h-10 rounded-full bg-orange-200 items-center justify-center shadow-sm">
-            <Text className="text-orange-900 font-bold text-sm">EU</Text>
+      {/* Header Section */}
+      <View className="px-5 pt-4 pb-3 z-20 bg-[#1f2235]">
+        {/* Title Bar */}
+        <View className="flex-row items-center justify-between mb-5">
+          <View className="flex-row items-center gap-3">
+            <View className="w-10 h-10 bg-slate-800 rounded-full items-center justify-center border border-slate-700">
+              <Feather name="map-pin" size={18} color="#fbbf24" />
+            </View>
+            <View>
+              <Text className="text-white font-extrabold text-[20px] tracking-tight">Comunidade</Text>
+              <Text className="text-[#fbbf24] text-[11px] font-bold uppercase tracking-widest mt-0.5">Raio de 5km</Text>
+            </View>
           </View>
-          <Text className="text-white font-extrabold text-[16px] tracking-wide">
-            Feed da Comunidade
+
+          <TouchableOpacity
+            className="w-10 h-10 items-center justify-center rounded-full bg-slate-800/80 border border-slate-700 active:bg-slate-700"
+          >
+            <Feather name="search" size={18} color="white" />
+          </TouchableOpacity>
+        </View>
+
+        {/* Create Post Input Trigger */}
+        <TouchableOpacity
+          activeOpacity={0.9}
+          onPress={() => navigation.navigate("Reportar")}
+          className="flex-row items-center bg-[#292D46] border border-[#3A3F63] rounded-full px-4 py-3 mb-5 shadow-sm"
+        >
+          <View className="w-8 h-8 rounded-full bg-slate-700 items-center justify-center mr-3">
+            <MaterialIcons name="person" size={18} color="#94A3B8" />
+          </View>
+          <Text className="flex-1 text-slate-400 font-medium text-[14px]">
+            Inicie uma discussão ou relate algo...
           </Text>
-          <TouchableOpacity
-            onPress={() => navigation.navigate("Reportar")}
-            className="w-10 h-10 items-center justify-center rounded-full bg-slate-800/30"
-          >
-            <FontAwesome5 name="plus" size={18} color="white" />
-          </TouchableOpacity>
-        </View>
+          <View className="w-8 h-8 bg-blue-600 rounded-full items-center justify-center shadow-lg shadow-blue-600/40">
+            <Feather name="plus" size={18} color="white" />
+          </View>
+        </TouchableOpacity>
 
-        {/* Create Post Input Inline */}
-        <View className="pt-4 flex-row items-center gap-3">
-          <View className="w-9 h-9 rounded-full bg-orange-200 items-center justify-center hidden" />
-          <TouchableOpacity
-            onPress={() => navigation.navigate("Reportar")}
-            className="flex-1 py-1"
+        {/* Horizontal Navigation Pills */}
+        <View className="-mx-5">
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={{ paddingHorizontal: 20, gap: 10 }}
           >
-            <Text className="text-slate-400 text-[14px]">
-              Compartilhe algo com sua vizinhança...
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            onPress={() => navigation.navigate("Reportar")}
-            className="bg-blue-600 px-5 py-1.5 rounded-full border border-blue-500 shadow-md"
-          >
-            <Text className="text-white font-bold text-[12px] uppercase">
-              Postar
-            </Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* Filter Pills (Categorias do Layout) */}
-        <View className="flex-row items-center gap-2 mt-4 pb-1">
-          <TouchableOpacity className="bg-blue-600 px-4 py-1.5 rounded-full border border-blue-500 shadow-sm">
-            <Text className="text-white font-bold text-[12px]">Todos</Text>
-          </TouchableOpacity>
-          <TouchableOpacity className="bg-white/5 px-4 py-1.5 rounded-full border border-white/10">
-            <Text className="text-slate-300 font-medium text-[12px]">
-              Alertas
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity className="bg-white/5 px-4 py-1.5 rounded-full border border-white/10">
-            <Text className="text-slate-300 font-medium text-[12px]">
-              Perguntas
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity className="bg-white/5 px-4 py-1.5 rounded-full border border-white/10">
-            <Text className="text-slate-300 font-medium text-[12px]">
-              Eventos
-            </Text>
-          </TouchableOpacity>
+            {["Todos", "Alertas 🔥", "Suspeitos 👀", "Perdidos", "Eventos"].map((tab) => (
+              <TouchableOpacity
+                key={tab}
+                onPress={() => setActiveTab(tab)}
+                className={`px-5 py-2 rounded-full border ${activeTab === tab
+                  ? "bg-blue-600 border-blue-500 shadow-md shadow-blue-600/30"
+                  : "bg-[#292D46] border-[#3A3F63]"
+                  }`}
+              >
+                <Text
+                  className={`font-bold text-[13px] ${activeTab === tab ? "text-white" : "text-slate-300"
+                    }`}
+                >
+                  {tab}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
         </View>
       </View>
 
-      {/* Linha Divisória Sutil no Final do Cabeçalho */}
-      <View className="h-[1px] bg-slate-800 shadow-[0_2px_10px_rgba(0,0,0,0.5)] z-10" />
-
-      {loading ? (
-        <View className="flex-1 items-center justify-center bg-[#1f2235]">
-          <ActivityIndicator size="large" color="#3b82f6" />
-        </View>
-      ) : (
-        <FlatList
-          data={posts}
-          renderItem={renderPost}
-          keyExtractor={(item) => item.id.toString()}
-          contentContainerStyle={{ paddingBottom: 100 }}
-          className="bg-[#1f2235]"
-          refreshControl={
-            <RefreshControl
-              refreshing={refreshing}
-              onRefresh={onRefresh}
-              tintColor="#fbbf24"
-              colors={["#fbbf24"]}
-            />
-          }
-          ListEmptyComponent={
-            <View className="py-16 items-center px-8">
-              <Ionicons
-                name="chatbubbles-outline"
-                size={48}
-                color="#334155"
-                className="mb-4"
+      {/* Main List */}
+      <View className="flex-1 bg-[#1A1C2C]">
+        {loading ? (
+          <View className="flex-1 items-center justify-center">
+            <ActivityIndicator size="large" color="#fbbf24" />
+          </View>
+        ) : (
+          <FlatList
+            data={posts}
+            renderItem={renderPost}
+            keyExtractor={(item) => item.id.toString()}
+            contentContainerStyle={{ paddingBottom: 120, paddingTop: 4 }}
+            showsVerticalScrollIndicator={false}
+            refreshControl={
+              <RefreshControl
+                refreshing={refreshing}
+                onRefresh={onRefresh}
+                tintColor="#fbbf24"
+                colors={["#fbbf24"]}
+                progressBackgroundColor="#1f2235"
               />
-              <Text className="text-white font-bold text-center text-[16px] mb-2">
-                Comunidade Silenciosa
-              </Text>
-              <Text className="text-slate-500 text-center text-[13px] leading-5">
-                Não há alertas ou mensagens ativas na sua vizinhança recente.
-              </Text>
-            </View>
-          }
-        />
-      )}
+            }
+            ListEmptyComponent={
+              <View className="py-20 items-center px-10">
+                <View className="w-20 h-20 bg-[#292D46] rounded-full items-center justify-center mb-6 border border-[#3A3F63]">
+                  <Feather name="wind" size={32} color="#64748b" />
+                </View>
+                <Text className="text-white font-extrabold text-center text-[18px] mb-2 tracking-tight">
+                  Tudo tranquilo por aqui
+                </Text>
+                <Text className="text-slate-400 text-center text-[14px] leading-6 font-medium">
+                  Nenhum alerta ou discussão na sua área nas últimas 24 horas. Continue mantendo a vizinhança segura!
+                </Text>
+              </View>
+            }
+          />
+        )}
+      </View>
     </SafeAreaView>
   );
 };
