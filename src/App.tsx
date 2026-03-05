@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import Map, { Marker, NavigationControl, MapRef, Layer } from 'react-map-gl/mapbox';
 import 'mapbox-gl/dist/mapbox-gl.css';
-import { ArrowLeft, ChevronDown, Crosshair, Info, Map as MapIcon, Globe, Moon, AlertTriangle, X } from 'lucide-react';
+import { ChevronDown, Crosshair, Info, Map as MapIcon, Globe, Moon, AlertTriangle, X } from 'lucide-react';
 
 const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_TOKEN;
 
@@ -64,13 +64,7 @@ function App() {
         </div>
       </div>
 
-      {/* Back Button */}
-      <button
-        onClick={() => window.history.back()}
-        className="absolute top-6 left-4 z-30 w-10 h-10 flex items-center justify-center rounded-full bg-slate-900/50 backdrop-blur-md hover:bg-slate-800 border border-slate-700 pointer-events-auto transition-colors focus:outline-none"
-      >
-        <ArrowLeft size={24} className="text-white" />
-      </button>
+
 
       {/* Map Style Toggle */}
       <div className="absolute top-6 right-4 z-30 flex bg-slate-900/80 backdrop-blur-md rounded-full border border-slate-700 p-1 pointer-events-auto shadow-lg">
@@ -109,6 +103,7 @@ function App() {
             pitch: 0
           }}
           style={{ width: '100%', height: '100%' }}
+          padding={{ top: 0, bottom: 90, left: 0, right: 0 }}
           mapStyle={getMapboxStyle()}
           attributionControl={false}
           logoPosition="bottom-left"
