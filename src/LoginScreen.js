@@ -44,7 +44,6 @@ const LoginScreen = ({ navigation }) => {
               name="shield-alt"
               size={46}
               color="#3b82f6"
-              style={{ transform: [{ rotate: "-5deg" }] }}
             />
           </View>
 
