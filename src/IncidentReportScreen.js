@@ -23,8 +23,17 @@ const IncidentReportScreen = ({ navigation }) => {
   const [selectedType, setSelectedType] = useState(null);
   const [description, setDescription] = useState("");
   const [loading, setLoading] = useState(false);
-
   const [isAnonymous, setIsAnonymous] = useState(false);
+
+  // Funcionalidade do botão Radar
+  const [scanMode, setScanMode] = useState("idle");
+
+  const handleScan = () => {
+    setScanMode("scanning");
+    setTimeout(() => {
+      setScanMode("analyzed");
+    }, 2000);
+  };
 
   const handleSubmit = async () => {
     if (!selectedType) {
@@ -84,6 +93,48 @@ const IncidentReportScreen = ({ navigation }) => {
     <SafeAreaView className="flex-1 bg-[#0a0f1c]">
       <StatusBar style="light" />
 
+      {/* OVERLAYS DO RADAR/SCANNER */}
+      {/* O overlay de 'scanning' foi removido da tela inteira pois a animação foi movida para DENTRO do minimapa (IncidentLocationMap) */}
+
+      {scanMode === "analyzed" && (
+        <View className="absolute bottom-0 left-0 right-0 p-4 z-50">
+          <View className="bg-slate-900/95 border border-red-500/30 rounded-2xl p-5 shadow-2xl">
+            <View className="flex-row items-center gap-4 mb-4">
+              <View className="w-14 h-14 rounded-full bg-red-500/20 items-center justify-center border border-red-500/30">
+                <Ionicons name="warning-outline" size={28} color="#ef4444" />
+              </View>
+              <View>
+                <Text className="text-white font-bold text-lg">
+                  Atenção: Risco Local
+                </Text>
+                <Text className="text-slate-400 text-sm">
+                  1 incidente reportado nas últimas 24h
+                </Text>
+              </View>
+            </View>
+
+            <TouchableOpacity
+              onPress={() => {
+                setScanMode("idle");
+                navigation.navigate("SafeRoute");
+              }}
+              className="bg-blue-600 h-12 rounded-xl flex-row items-center justify-center gap-2 shadow-lg mb-3"
+            >
+              <MaterialIcons name="alt-route" size={24} color="white" />
+              <Text className="text-white font-bold text-base">
+                Sugerir Desvio Seguro
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => setScanMode("idle")}
+              className="h-10 items-center justify-center"
+            >
+              <Text className="text-slate-500 text-sm font-bold">FECHAR</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
+
       {/* Glowing Background Elements */}
       <View className="absolute top-0 w-full h-64 bg-red-600/5 rounded-full blur-3xl -z-10" />
 
@@ -128,17 +179,53 @@ const IncidentReportScreen = ({ navigation }) => {
         </View>
 
         {/* Location Map Preview */}
-        <View className="flex-row items-centerjustify-between mb-3 mt-2">
+        <View className="flex-row items-center justify-between mb-3 mt-2">
           <Text className="text-white font-extrabold text-[15px] tracking-wide">
             Ponto de Risco
           </Text>
           <Text className="text-slate-500 text-xs ml-auto">
-            Localização Automática
+            Gps ativo
           </Text>
         </View>
-        <View className="w-full h-40 rounded-3xl overflow-hidden mb-8 bg-slate-800 border-2 border-slate-700/50 relative shadow-xl">
-          <IncidentLocationMap />
+        <View className="w-full h-40 rounded-3xl overflow-hidden mt-1 mb-4 bg-slate-800 border-2 border-slate-700/50 relative shadow-xl">
+          <IncidentLocationMap scanMode={scanMode} />
           <View className="absolute inset-0 border-[3px] border-black/10 rounded-3xl pointer-events-none" />
+        </View>
+        
+        {/* Componente de Área */}
+        <View className="w-full flex-row rounded-3xl overflow-hidden mb-8 shadow-2xl">
+          {/* Metade Esquerda: Incidentes (Cor Escura) */}
+          <TouchableOpacity
+            onPress={() => {
+              Alert.alert("Detalhes", "Há 1 incidente verificado próximo dessa região.\n\nVeja no mapa abaixo a área de perigo destacada!");
+              setScanMode("analyzed");
+            }}
+            className="flex-1 bg-[#151C2C] py-7 items-center justify-center relative"
+            activeOpacity={0.8}
+          >
+            <View className="bg-[#1C2538] w-14 h-14 rounded-[20px] items-center justify-center border border-[#2B354D] shadow-inner">
+              <Text className="text-white font-black text-2xl tracking-tighter">1</Text>
+            </View>
+            <Text className="text-[#94A3B8] font-bold text-[10px] uppercase tracking-[0.2em] mt-3">
+              Incidentes
+            </Text>
+            {/* Divisória sutil */}
+            <View className="absolute right-0 top-4 bottom-4 w-[1px] bg-[#2B354D]" />
+          </TouchableOpacity>
+
+          {/* Metade Direita: Autenticação/Scan (Azul Vibrante) */}
+          <TouchableOpacity
+            onPress={handleScan}
+            className="flex-1 bg-[#2B354D] py-7 items-center justify-center"
+            activeOpacity={0.8}
+          >
+            <View className="bg-[#2563EB] w-14 h-14 rounded-full items-center justify-center shadow-[0_0_15px_rgba(37,99,235,0.6)] border border-[#3B82F6]/50">
+              <MaterialIcons name="radar" size={28} color="white" />
+            </View>
+            <Text className="text-[#93C5FD] font-bold text-[10px] uppercase tracking-[0.15em] mt-3">
+              Verificar Área
+            </Text>
+          </TouchableOpacity>
         </View>
 
         {/* Incident Type Grid Glassmorphism */}

@@ -5,20 +5,12 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Dimensions,
+  Animated,
 } from "react-native";
 import { WebView } from "react-native-webview";
 import { MaterialIcons, Ionicons } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { StatusBar } from "expo-status-bar";
-import Animated, {
-  useSharedValue,
-  useAnimatedStyle,
-  withRepeat,
-  withTiming,
-  withSequence,
-  Easing,
-  FadeIn,
-} from "react-native-reanimated";
 
 // Initial Region (São Paulo Placeholder)
 const INITIAL_REGION = {
@@ -47,7 +39,7 @@ const SAFE_ROUTE_COORDS = [
 // We will use the Web-based Mapbox 3D rendering instead of manual native markers,
 // giving us the premium Google-like map performance and 3D buildings without breaking Expo Go!
 
-const SafetyMapScreen = () => {
+const SafetyMapScreen = ({ navigation }) => {
   // Modes: 'idle' (default), 'scanning', 'analyzed' (risks shown), 'route' (safe path shown)
   const [mapMode, setMapMode] = useState("idle");
   const [scanProgress, setScanProgress] = useState(0);
@@ -101,24 +93,7 @@ const SafetyMapScreen = () => {
 
           {/* UI OVERLAYS */}
 
-          {/* State: IDLE - "Scan" Button */}
-          {mapMode === "idle" && (
-            <View className="absolute inset-0 items-center justify-center bg-black/40 z-10 pointer-events-none">
-              <View className="items-center gap-4 pointer-events-auto">
-                <View className="w-24 h-24 rounded-full border-4 border-white/20 items-center justify-center animate-pulse">
-                  <TouchableOpacity
-                    onPress={handleScan}
-                    className="w-20 h-20 bg-blue-600 rounded-full items-center justify-center shadow-lg shadow-blue-500/50"
-                  >
-                    <MaterialIcons name="radar" size={40} color="white" />
-                  </TouchableOpacity>
-                </View>
-                <Text className="text-white text-lg font-bold shadow-black">
-                  Verificar Minha Área
-                </Text>
-              </View>
-            </View>
-          )}
+          {/* O bloco flutuante de incidentes/radar foi movido para o IncidentReportScreen */}
 
           {/* State: SCANNING */}
           {mapMode === "scanning" && (
@@ -132,10 +107,7 @@ const SafetyMapScreen = () => {
 
           {/* State: ANALYZED - Bottom Sheet */}
           {mapMode === "analyzed" && (
-            <Animated.View
-              entering={FadeIn.duration(500)}
-              className="absolute bottom-0 left-0 right-0 p-4 z-20"
-            >
+            <View className="absolute bottom-0 left-0 right-0 p-4 z-20">
               <View className="bg-slate-900/95 border border-red-500/30 rounded-2xl p-5 shadow-2xl">
                 <View className="flex-row items-center gap-4 mb-4">
                   <View className="w-14 h-14 rounded-full bg-red-500/20 items-center justify-center border border-red-500/30">
@@ -179,15 +151,12 @@ const SafetyMapScreen = () => {
                   <Text className="text-slate-500 text-sm">Cancelar</Text>
                 </TouchableOpacity>
               </View>
-            </Animated.View>
+            </View>
           )}
 
           {/* State: ROUTE - Navigation Panel */}
           {mapMode === "route" && (
-            <Animated.View
-              entering={FadeIn.duration(500)}
-              className="absolute bottom-0 left-0 right-0 p-4 z-20"
-            >
+            <View className="absolute bottom-0 left-0 right-0 p-4 z-20">
               <View className="bg-slate-900/95 border border-green-500/30 rounded-2xl p-5 shadow-2xl">
                 <View className="flex-row justify-between items-center mb-4">
                   <View>
@@ -217,7 +186,7 @@ const SafetyMapScreen = () => {
                   </TouchableOpacity>
                 </View>
               </View>
-            </Animated.View>
+            </View>
           )}
         </View>
       </View>
