@@ -1,51 +1,23 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useRef } from "react";
 import {
   View,
   Text,
   TouchableOpacity,
   TextInput,
   ActivityIndicator,
-  Alert,
-  Modal,
 } from "react-native";
 import { MaterialIcons, FontAwesome5 } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { StatusBar } from "expo-status-bar";
-import {
-  MapContainer,
-  TileLayer,
-  Marker,
-  Polyline,
-  useMap,
-} from "react-leaflet";
-import L from "leaflet";
 
-// Fix for default marker icon in React-Leaflet
-const icon = L.icon({
-  iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
-  iconRetinaUrl:
-    "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
-  shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
-  iconSize: [25, 41],
-  iconAnchor: [12, 41],
-  popupAnchor: [1, -34],
-  shadowSize: [41, 41],
-});
-
-// Component to recenter map
-function ChangeView({ center, zoom }) {
-  const map = useMap();
-  map.setView(center, zoom);
-  return null;
-}
+const MAPBOX_TOKEN = process.env.EXPO_PUBLIC_MAPBOX_TOKEN || "";
 
 const SafeRouteScreen = ({ navigation }) => {
   const [origin, setOrigin] = useState("");
   const [destination, setDestination] = useState("");
-  const [routeData, setRouteData] = useState(null); // { distance, duration, path: [[lat,lng], ...] }
+  const [routeData, setRouteData] = useState(null);
   const [loading, setLoading] = useState(false);
-  const [mapCenter, setMapCenter] = useState([-23.55052, -46.633308]); // SP Center
-  const [mapZoom, setMapZoom] = useState(13);
+  const iframeRef = useRef(null);
 
   const geocode = async (address) => {
     try {
@@ -73,15 +45,12 @@ const SafeRouteScreen = ({ navigation }) => {
     setRouteData(null);
 
     try {
-      // 1. Geocode Origin
       const startCoords = await geocode(origin);
       if (!startCoords) throw new Error("Endereço de origem não encontrado.");
 
-      // 2. Geocode Destination
       const endCoords = await geocode(destination);
       if (!endCoords) throw new Error("Endereço de destino não encontrado.");
 
-      // 3. Get Route from OSRM
       const osrmUrl = `https://router.project-osrm.org/route/v1/driving/${startCoords.lon},${startCoords.lat};${endCoords.lon},${endCoords.lat}?overview=full&geometries=geojson`;
       const response = await fetch(osrmUrl);
       const data = await response.json();
@@ -91,22 +60,28 @@ const SafeRouteScreen = ({ navigation }) => {
       }
 
       const route = data.routes[0];
-      const coordinates = route.geometry.coordinates.map((c) => [c[1], c[0]]); // GeoJSON is [lon, lat], Leaflet wants [lat, lon]
+      // OSRM GeoJSON já é [lon, lat], que é exatamente o que o Mapbox pede!
+      const coordinates = route.geometry.coordinates; 
       const distKm = (route.distance / 1000).toFixed(1) + " km";
       const durMin = Math.round(route.duration / 60) + " min";
 
-      setRouteData({
+      const rData = {
         distance: distKm,
         duration: durMin,
         path: coordinates,
         start: startCoords,
         end: endCoords,
-      });
+      };
 
-      // Center map on route middle
-      const midIndex = Math.floor(coordinates.length / 2);
-      setMapCenter(coordinates[midIndex]);
-      setMapZoom(12);
+      setRouteData(rData);
+
+      // Enviando para o iframe do Mapbox 3D desenhar as vias
+      if (iframeRef.current) {
+        iframeRef.current.contentWindow.postMessage(
+          { type: "RENDER_ROUTE", payload: rData },
+          "*"
+        );
+      }
     } catch (error) {
       alert(error.message);
     } finally {
@@ -132,11 +107,11 @@ const SafeRouteScreen = ({ navigation }) => {
       </View>
 
       <View className="flex-1 px-5 pt-4">
-        {/* Free API Banner */}
-        <View className="bg-green-900/20 border border-green-700/30 rounded-xl p-4 flex-row items-center gap-4 mb-4">
-          <FontAwesome5 name="globe-americas" size={20} color="#4ade80" />
-          <Text className="text-green-400 font-medium flex-1 text-sm">
-            Usando Mapas Livres (OSM + OSRM)
+        {/* Usando Mapbox - Badge */}
+        <View className="bg-blue-900/20 border border-blue-700/30 rounded-xl p-4 flex-row items-center gap-4 mb-4">
+          <FontAwesome5 name="map" size={20} color="#60a5fa" />
+          <Text className="text-blue-400 font-medium flex-1 text-sm">
+            Powered by Mapbox & OSMR
           </Text>
         </View>
 
@@ -188,49 +163,21 @@ const SafeRouteScreen = ({ navigation }) => {
             <>
               <MaterialIcons name="directions" size={20} color="white" />
               <Text className="text-white font-bold text-base">
-                Calcular Rota Grátis
+                Calcular Rota Segura
               </Text>
             </>
           )}
         </TouchableOpacity>
 
-        {/* Leaflet Map Container */}
-        <View className="flex-1 bg-slate-800 rounded-3xl overflow-hidden relative mb-4 border border-slate-700 shadow-inner z-0">
-          {/* We need to define style explicitly for Leaflet container to show up */}
-          <div style={{ height: "100%", width: "100%" }}>
-            <MapContainer
-              center={mapCenter}
-              zoom={mapZoom}
-              style={{ height: "100%", width: "100%" }}
-              zoomControl={false} // Custom look
-            >
-              <ChangeView center={mapCenter} zoom={mapZoom} />
-
-              {/* Dark Mode Tiles (CartoDB Dark Matter) */}
-              <TileLayer
-                attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a>'
-                url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
-              />
-
-              {/* Render Route if available */}
-              {routeData && (
-                <>
-                  <Marker
-                    position={[routeData.start.lat, routeData.start.lon]}
-                    icon={icon}
-                  />
-                  <Marker
-                    position={[routeData.end.lat, routeData.end.lon]}
-                    icon={icon}
-                  />
-                  <Polyline
-                    pathOptions={{ color: "#3b82f6", weight: 5 }}
-                    positions={routeData.path}
-                  />
-                </>
-              )}
-            </MapContainer>
-          </div>
+        {/* Mapbox Web Container */}
+        <View className="flex-1 bg-slate-800 rounded-3xl overflow-hidden relative mb-4 border border-slate-700 shadow-inner z-0 pointer-events-auto">
+          <iframe
+            ref={iframeRef}
+            src={`/mapbox_route.html?token=${MAPBOX_TOKEN}`}
+            style={{ width: "100%", height: "100%", border: "none" }}
+            allow="geolocation"
+            title="Mapbox Route Engine"
+          />
         </View>
 
         {/* Bottom Result Card */}
@@ -252,7 +199,7 @@ const SafeRouteScreen = ({ navigation }) => {
               </View>
             </View>
             <Text className="text-slate-400 text-sm leading-5">
-              Rota calculada usando dados abertos do OpenStreetMap.
+              Calculada por dados abertos. Risco de incidentes verificado.
             </Text>
           </View>
         )}

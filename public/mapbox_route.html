@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <link href="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.css" rel="stylesheet">
+    <script src="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.js"></script>
+    <style>
+        body { margin: 0; padding: 0; background-color: #0f172a; overflow: hidden; display: flex; flex-direction: column; }
+        #map { flex: 1; width: 100vw; height: 100vh; }
+        .mapboxgl-control-container { display: none !important; }
+
+        /* Estilização para pino de ponto de partida/chegada customizado */
+        .origin-marker {
+            width: 20px;
+            height: 20px;
+            background: #cbd5e1; /* gris claro */
+            border-radius: 50%;
+            border: 3px solid #0f172a;
+            box-shadow: 0 0 10px rgba(0,0,0,0.5);
+        }
+
+        .destination-marker {
+            width: 24px;
+            height: 24px;
+            background: #3b82f6; /* azul vivo */
+            border-radius: 50%;
+            border: 3px solid #1e3a8a;
+            box-shadow: 0 0 15px rgba(59, 130, 246, 0.8);
+            animation: pulse-dest 2s infinite;
+        }
+
+        @keyframes pulse-dest {
+            0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.7); }
+            70% { transform: scale(1); box-shadow: 0 0 0 10px rgba(59, 130, 246, 0); }
+            100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(59, 130, 246, 0); }
+        }
+    </style>
+</head>
+<body>
+    <div id="map"></div>
+    <script>
+        // O token é recebido via queryString para não expor a chave no código bruto do GitHub
+        const urlParams = new URLSearchParams(window.location.search);
+        const mapboxToken = urlParams.get('token');
+        
+        mapboxgl.accessToken = mapboxToken;
+        
+        var map = new mapboxgl.Map({
+            container: 'map',
+            style: 'mapbox://styles/mapbox/dark-v11', // O estilo escuro oficial do Mapbox
+            center: [-46.633308, -23.55052], // [lng, lat] de SP
+            zoom: 12,
+            pitch: 45, // Inicia mais inclinado pra mostrar 3D
+            bearing: 0,
+            interactive: true,
+            projection: 'globe'
+        });
+
+        // Variáveis de controle
+        var markers = [];
+        var currentRouteId = 'route-line';
+
+        map.on('style.load', function() {
+            // Atmosfera especial do Mapbox 3D
+            map.setFog({
+                'range': [-1, 2],
+                'color': '#0f172a',
+                'horizon-blend': 0.1
+            });
+            
+            // Adicionando a camada de Prédios 3D extrudados
+            map.addLayer({
+                'id': '3d-buildings',
+                'source': 'composite',
+                'source-layer': 'building',
+                'filter': ['==', 'extrude', 'true'],
+                'type': 'fill-extrusion',
+                'minzoom': 14,
+                'paint': {
+                    'fill-extrusion-color': '#1e293b',
+                    'fill-extrusion-height': ['get', 'height'],
+                    'fill-extrusion-base': ['get', 'min_height'],
+                    'fill-extrusion-opacity': 0.8
+                }
+            });
+        });
+
+        // Escutar mensagens do React Native (Web iframe)
+        window.addEventListener("message", (event) => {
+            const data = event.data;
+            if (data && data.type === "RENDER_ROUTE") {
+                const { path, start, end } = data.payload;
+
+                // 1. Limpar rota e marcadores anteriores
+                if (map.getSource(currentRouteId)) {
+                    map.removeLayer(currentRouteId);
+                    map.removeSource(currentRouteId);
+                }
+                markers.forEach(m => m.remove());
+                markers = [];
+
+                // 2. Colocar linha da rota
+                map.addSource(currentRouteId, {
+                    'type': 'geojson',
+                    'data': {
+                        'type': 'Feature',
+                        'properties': {},
+                        'geometry': {
+                            'type': 'LineString',
+                            'coordinates': path // Assumindo Array [lng, lat]
+                        }
+                    }
+                });
+
+                map.addLayer({
+                    'id': currentRouteId,
+                    'type': 'line',
+                    'source': currentRouteId,
+                    'layout': {
+                        'line-join': 'round',
+                        'line-cap': 'round'
+                    },
+                    'paint': {
+                        'line-color': '#3b82f6', // Azul da Alerta Criminal
+                        'line-width': 6,
+                        'line-opacity': 0.8
+                    }
+                });
+
+                // 3. Colocar Marcadores customizados de início e fim
+                var elStart = document.createElement('div');
+                elStart.className = 'origin-marker';
+                const markerStart = new mapboxgl.Marker(elStart)
+                    .setLngLat([start.lon, start.lat]) // Cuidado! osrm devolveu e passamos objeto {lon, lat}
+                    .addTo(map);
+
+                var elEnd = document.createElement('div');
+                elEnd.className = 'destination-marker';
+                const markerEnd = new mapboxgl.Marker(elEnd)
+                    .setLngLat([end.lon, end.lat])
+                    .addTo(map);
+                
+                markers.push(markerStart, markerEnd);
+
+                // 4. Centralizar e Enquadrar Rota na câmera
+                // Cria uma "Bounding Box" que abraça todos os pontos da rota
+                const bounds = new mapboxgl.LngLatBounds(
+                    path[0],
+                    path[path.length - 1] // Começa os limites com o min e max aparentes
+                );
+                
+                // Expande box pra todos os pontos pra não vazar fora
+                for (const coord of path) {
+                    bounds.extend(coord);
+                }
+
+                map.fitBounds(bounds, {
+                    padding: {top: 50, bottom: 50, left: 50, right: 50},
+                    pitch: 60, // Inclina a rota pro Visual isonométrico irado
+                    bearing: -15, // Gira um pouquinho o ângulo pra dramaticidade
+                    duration: 2000 // 2s de animação de voo suave
+                });
+            }
+        });
+    </script>
+</body>
+</html>
