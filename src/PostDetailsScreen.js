@@ -42,7 +42,12 @@ const PostDetailsScreen = ({ route, navigation }) => {
       .from("incidents")
       .select(
         `
-                *,
+                id,
+                type,
+                description,
+                latitude,
+                longitude,
+                created_at,
                 profiles (full_name, guardian_level),
                 likes (count),
                 comments (count)
@@ -61,7 +66,9 @@ const PostDetailsScreen = ({ route, navigation }) => {
       .from("comments")
       .select(
         `
-                *,
+                id,
+                content,
+                created_at,
                 profiles (full_name, avatar_url)
             `,
       )
@@ -74,6 +81,11 @@ const PostDetailsScreen = ({ route, navigation }) => {
 
   const handleSendComment = async () => {
     if (!newComment.trim()) return;
+    if (!user) {
+      Alert.alert("Login necessário", "Faça login para enviar comentários.");
+      return;
+    }
+
     setSubmitting(true);
 
     const { error } = await supabase.from("comments").insert({

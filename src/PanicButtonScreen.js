@@ -75,6 +75,14 @@ const PanicButtonScreen = ({ navigation }) => {
     let lat = -23.55052;
     let long = -46.633308;
 
+    if (!user) {
+      Alert.alert(
+        "Login necessário",
+        "Para acionar o SOS, faça login com sua conta (Google).",
+      );
+      return;
+    }
+
     try {
       let { status } = await Location.requestForegroundPermissionsAsync();
       if (status === "granted") {
@@ -88,17 +96,15 @@ const PanicButtonScreen = ({ navigation }) => {
 
     // Insert into Supabase
     try {
-      if (user) {
-        await supabase.from("incidents").insert({
-          type: "SOS",
-          description:
-            "PEDIDO DE SOCORRO IMEDIATO! O usuário acionou o botão de pânico.",
-          latitude: lat,
-          longitude: long,
-          user_id: user.id,
-          status: "critical",
-        });
-      }
+      await supabase.from("incidents").insert({
+        type: "SOS",
+        description:
+          "PEDIDO DE SOCORRO IMEDIATO! O usuário acionou o botão de pânico.",
+        latitude: lat,
+        longitude: long,
+        user_id: user.id,
+        status: "critical",
+      });
     } catch (e) {
       console.log("Erro ao enviar SOS", e);
     }

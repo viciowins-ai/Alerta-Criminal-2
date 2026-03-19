@@ -12,13 +12,16 @@ export const AuthProvider = ({ children }) => {
     // Verificar sessão ativa ao iniciar
     const checkSession = async () => {
       try {
-        const {
-          data: { session },
-          error,
-        } = await supabase.auth.getSession();
+        const timeout = new Promise((_, reject) => 
+          setTimeout(() => reject(new Error("Supabase Timeout")), 2500)
+        );
+        const { data, error } = await Promise.race([
+           supabase.auth.getSession(),
+           timeout
+        ]);
         if (error) throw error;
-        if (session) {
-          setUser(session.user);
+        if (data && data.session) {
+          setUser(data.session.user);
         }
       } catch (error) {
         console.log("Erro ao verificar sessão:", error.message);
@@ -128,18 +131,6 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const signInAsGuest = async () => {
-    setLoading(true);
-    // Simula um usuário logado para testes
-    const guestUser = {
-      id: "guest-123",
-      email: "visitante@teste.com",
-      user_metadata: { full_name: "Visitante" },
-    };
-    setUser(guestUser);
-    setLoading(false);
-  };
-
   return (
     <AuthContext.Provider
       value={{
@@ -148,7 +139,6 @@ export const AuthProvider = ({ children }) => {
         signIn,
         signOut,
         signUp,
-        signInAsGuest,
         signInWithGoogle,
       }}
     >

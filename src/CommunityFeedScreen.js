@@ -38,7 +38,10 @@ const CommunityFeedScreen = ({ navigation }) => {
         .from("incidents")
         .select(
           `
-            *,
+            id,
+            type,
+            description,
+            created_at,
             profiles (full_name, guardian_level),
             likes (count),
             comments (count)

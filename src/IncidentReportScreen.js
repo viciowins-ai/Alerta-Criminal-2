@@ -41,11 +41,14 @@ const IncidentReportScreen = ({ navigation }) => {
       return;
     }
 
-    if (!user && !isAnonymous) {
+    // Seu schema atual exige `incidents.user_id` (not null) e a RLS valida `auth.uid() = user_id`.
+    // Então não é possível enviar incidentes como "anônimo" sem sessão Supabase real.
+    if (!user) {
       Alert.alert(
-        "Atenção",
-        "Você está navegando como visitante. O relato será anônimo automaticamente.",
+        "Login necessário",
+        "Para enviar um alerta, faça login com sua conta (Google).",
       );
+      return;
     }
 
     setLoading(true);
@@ -66,7 +69,7 @@ const IncidentReportScreen = ({ navigation }) => {
       }
 
       const { error } = await supabase.from("incidents").insert({
-        user_id: isAnonymous ? null : user ? user.id : null,
+        user_id: user.id,
         type: selectedType,
         description: description,
         latitude: latitude,
@@ -338,6 +341,7 @@ const IncidentReportScreen = ({ navigation }) => {
             thumbColor={"#ffffff"}
             onValueChange={setIsAnonymous}
             value={isAnonymous}
+            disabled={!user}
           />
         </View>
 

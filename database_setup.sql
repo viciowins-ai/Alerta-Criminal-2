@@ -102,7 +102,9 @@ create table public.comments (
 alter table public.comments enable row level security;
 
 create policy "Comentários visíveis para todos" on public.comments for select using (true);
-create policy "Usuários podem comentar" on public.comments for insert with check (auth.role() = 'authenticated');
+-- Importante: impedir spoof de user_id no insert
+create policy "Usuários podem comentar" on public.comments
+  for insert with check (auth.uid() = user_id);
 
 -- Tabela de Likes (Feed)
 create table public.likes (
@@ -116,7 +118,9 @@ create table public.likes (
 alter table public.likes enable row level security;
 
 create policy "Likes visíveis para todos" on public.likes for select using (true);
-create policy "Usuários podem dar like" on public.likes for insert with check (auth.role() = 'authenticated');
+-- Importante: impedir spoof de user_id no insert
+create policy "Usuários podem dar like" on public.likes
+  for insert with check (auth.uid() = user_id);
 create policy "Usuários podem remover like" on public.likes for delete using (auth.uid() = user_id);
 
 

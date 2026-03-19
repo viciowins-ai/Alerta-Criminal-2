@@ -15,7 +15,7 @@ import { StatusBar } from "expo-status-bar";
 import { useAuth } from "./context/AuthContext";
 
 const LoginScreen = ({ navigation }) => {
-  const { signInAsGuest, signInWithGoogle, loading } = useAuth();
+  const { signInWithGoogle, loading } = useAuth();
 
   return (
     <SafeAreaView className="flex-1 bg-[#0a0f1c]">
@@ -88,15 +88,7 @@ const LoginScreen = ({ navigation }) => {
           </TouchableOpacity>
 
           {/* Botão Visitante Estilo Glass */}
-          <TouchableOpacity
-            onPress={signInAsGuest}
-            disabled={loading}
-            className="w-full bg-slate-800/40 h-16 rounded-full items-center justify-center border border-slate-700/60 active:bg-slate-800/60"
-          >
-            <Text className="text-slate-300 font-semibold text-[15px]">
-              Ativar Modo Testador 👀
-            </Text>
-          </TouchableOpacity>
+          {/* Removido: signInAsGuest não cria sessão real no Supabase. */}
         </View>
 
         {/* Links Secundários */}
